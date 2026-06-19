@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MAD Fighter - $MAD Community</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --blood-red: #c0392b; --gold: #f39c12; --dark-gold: #d68910;
+    --neon-yellow: #f1c40f; --deep-black: #0a0a0a; --dark-bg: #111;
+    --purple: #8e44ad; --cyan: #00bcd4; --green: #27ae60; --orange: #e67e22;
+  }
+  body { font-family: 'Arial Black', sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; touch-action: manipulation; }
+  .screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #home-screen { background: radial-gradient(ellipse at center, #1a0000 0%, #000 70%); position: relative; overflow: hidden; }
+  #home-screen::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,0,0,0.03) 2px, rgba(255,0,0,0.03) 4px); pointer-events: none; }
+  .fire-bg { position: absolute; bottom: 0; left: 0; right: 0; height: 200px; background: linear-gradient(to top, rgba(192,57,43,0.4), rgba(243,156,18,0.2), transparent); animation: fireFlicker 2s ease-in-out infinite alternate; }
+  @keyframes fireFlicker { 0% { opacity: 0.6; transform: scaleY(1); } 100% { opacity: 1; transform: scaleY(1.05); } }
+  .logo-container { text-align: center; z-index: 10; margin-bottom: 20px; }
+  .logo-mad { font-size: clamp(48px, 12vw, 100px); font-weight: 900; color: var(--blood-red); text-shadow: 0 0 20px #ff0000, 0 0 40px #ff000066, 4px 4px 0 #000; letter-spacing: 8px; animation: logoGlow 2s ease-in-out infinite alternate; line-height: 1; }
+  .logo-fighter { font-size: clamp(20px, 5vw, 40px); color: var(--gold); letter-spacing: 12px; text-shadow: 0 0 15px var(--gold); margin-top: -5px; }
+  @keyframes logoGlow { 0% { text-shadow: 0 0 20px #ff0000, 0 0 40px #ff000066, 4px 4px 0 #000; } 100% { text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000aa, 4px 4px 0 #300; } }
+  .ca-box { background: rgba(0,0,0,0.7); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 16px; margin: 10px 0; font-size: clamp(8px, 2vw, 12px); color: var(--gold); letter-spacing: 1px; word-break: break-all; text-align: center; max-width: 90vw; }
+  .coded-by { font-size: clamp(11px, 2.5vw, 14px); color: #aaa; margin: 6px 0 2px; letter-spacing: 2px; }
+  .dedicated-to { font-size: clamp(10px, 2.2vw, 13px); color: var(--gold); opacity: 0.8; letter-spacing: 1px; margin-bottom: 20px; }
+  .menu-btn { background: linear-gradient(135deg, var(--blood-red), #7b0000); border: 2px solid var(--gold); color: var(--gold); font-size: clamp(14px, 3.5vw, 20px); font-weight: 900; letter-spacing: 3px; padding: 14px 40px; margin: 8px; cursor: pointer; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 20px rgba(192,57,43,0.5); min-width: 220px; touch-action: manipulation; }
+  .menu-btn:hover, .menu-btn:active { background: linear-gradient(135deg, #e74c3c, var(--blood-red)); box-shadow: 0 0 30px var(--blood-red); transform: scale(1.03); }
+  #char-select { background: radial-gradient(ellipse at center, #0a0a1a 0%, #000 80%); }
+  .select-title { font-size: clamp(18px, 5vw, 32px); color: var(--gold); text-shadow: 0 0 20px var(--gold); letter-spacing: 4px; margin-bottom: 15px; text-align: center; }
+  .fighter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; width: 100%; max-width: 700px; }
+  .fighter-card { background: rgba(20,20,30,0.9); border: 2px solid #333; border-radius: 8px; padding: 8px 5px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  .fighter-card:hover, .fighter-card:active, .fighter-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(243,156,18,0.5); transform: scale(1.05); background: rgba(243,156,18,0.1); }
+  .fighter-card.p2-selected { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,188,212,0.5); background: rgba(0,188,212,0.1); }
+  .fighter-avatar { width: 60px; height: 80px; margin: 0 auto 5px; position: relative; }
+  .fighter-name { font-size: clamp(7px, 1.8vw, 10px); color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .fighter-power-badge { font-size: 8px; color: var(--neon-yellow); margin-top: 2px; opacity: 0.8; }
+  #online-screen { background: radial-gradient(ellipse at center, #001a1a 0%, #000 80%); padding: 20px; }
+  .online-box { background: rgba(0,0,0,0.8); border: 2px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
+  .online-title { font-size: clamp(16px, 4vw, 24px); color: var(--cyan); text-shadow: 0 0 15px var(--cyan); letter-spacing: 3px; margin-bottom: 20px; }
+  .online-input { width: 100%; padding: 12px; background: rgba(255,255,255,0.08); border: 2px solid #444; border-radius: 6px; color: #fff; font-size: 16px; margin: 8px 0; outline: none; letter-spacing: 1px; }
+  .online-input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,188,212,0.3); }
+  .online-input::placeholder { color: #666; }
+  .online-status { margin: 12px 0; padding: 10px; border-radius: 6px; font-size: 13px; min-height: 36px; }
+  .status-waiting { background: rgba(243,156,18,0.2); border: 1px solid var(--gold); color: var(--gold); }
+  .status-connected { background: rgba(39,174,96,0.2); border: 1px solid var(--green); color: var(--green); }
+  .status-error { background: rgba(192,57,43,0.2); border: 1px solid var(--blood-red); color: #ff6b6b; }
+  #game-screen { background: #000; position: relative; overflow: hidden; }
+  .game-arena { width: 100%; height: 100%; position: relative; background: linear-gradient(180deg, #0d0d2b 0%, #1a0a00 60%, #2d1200 80%, #1a0800 100%); overflow: hidden; }
+  .arena-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse 80% 30% at 50% 20%, rgba(80,0,0,0.3) 0%, transparent 70%), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(255,255,255,0.03) 50px); }
+  .arena-floor { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(180deg, rgba(150,60,0,0.5), #3d1f00); border-top: 3px solid rgba(255,150,0,0.4); box-shadow: 0 -10px 40px rgba(255,100,0,0.2); }
+  .skull-decoration { position: absolute; bottom: 90px; font-size: 24px; opacity: 0.3; }
+  .hud { position: absolute; top: 0; left: 0; right: 0; padding: 8px; display: flex; align-items: center; gap: 8px; z-index: 100; background: rgba(0,0,0,0.7); }
+  .health-section { flex: 1; }
+  .p1-health-section { text-align: left; }
+  .p2-health-section { text-align: right; }
+  .fighter-label { font-size: clamp(9px, 2.2vw, 12px); color: var(--gold); letter-spacing: 2px; margin-bottom: 3px; text-transform: uppercase; }
+  .health-bar-outer { height: 14px; background: #111; border: 2px solid #444; border-radius: 3px; overflow: hidden; position: relative; }
+  .health-bar-inner { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width 0.2s ease; position: relative; }
+  .health-bar-inner.low { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+  .health-bar-inner.medium { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+  .p2-health-section .health-bar-inner { margin-left: auto; background: linear-gradient(90deg, #2ecc71, #27ae60); }
+  .timer-box { background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 6px; padding: 4px 10px; text-align: center; min-width: 50px; }
+  .timer-num { font-size: clamp(18px, 5vw, 28px); font-weight: 900; color: var(--gold); }
+  .round-display { position: absolute; top: 65px; left: 50%; transform: translateX(-50%); font-size: clamp(10px, 2.5vw, 14px); color: #aaa; letter-spacing: 3px; z-index: 100; }
+  .power-bars { position: absolute; bottom: 125px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; z-index: 100; }
+  .power-bar-container { width: 45%; }
+  .power-label { font-size: 9px; color: #aaa; margin-bottom: 2px; letter-spacing: 1px; }
+  .power-bar-outer { height: 8px; background: #111; border: 1px solid #333; border-radius: 2px; overflow: hidden; }
+  .power-bar-inner { height: 100%; background: linear-gradient(90deg, #8e44ad, #a855f7); transition: width 0.3s; }
+  .p2-power-container .power-bar-inner { background: linear-gradient(90deg, #a855f7, #8e44ad); }
+  .fighter-sprite { position: absolute; bottom: 120px; width: 80px; height: 140px; cursor: pointer; transition: transform 0.1s; image-rendering: pixelated; }
+  #p1-sprite { left: 15%; }
+  #p2-sprite { right: 15%; transform: scaleX(-1); }
+  .fighter-svg { width: 100%; height: 100%; }
+  .controls { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; background: rgba(0,0,0,0.85); border-top: 2px solid #222; z-index: 200; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }
+  .dpad-btn { background: rgba(50,50,50,0.9); border: 2px solid #444; border-radius: 6px; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; transition: background 0.1s; -webkit-tap-highlight-color: transparent; }
+  .dpad-btn:active, .dpad-btn.pressed { background: rgba(192,57,43,0.6); border-color: var(--blood-red); }
+  .dpad-center { background: rgba(30,30,30,0.5); border-color: #333; }
+  .action-btns { display: grid; grid-template-columns: repeat(2, 50px); grid-template-rows: repeat(2, 50px); gap: 6px; }
+  .action-btn { border-radius: 50%; border: 3px solid; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; letter-spacing: 0px; text-align: center; line-height: 1.1; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, box-shadow 0.1s; }
+  .action-btn:active, .action-btn.pressed { transform: scale(0.9); filter: brightness(1.4); }
+  .btn-punch { background: rgba(192,57,43,0.3); border-color: #e74c3c; color: #e74c3c; }
+  .btn-kick { background: rgba(243,156,18,0.3); border-color: #f39c12; color: #f39c12; }
+  .btn-block { background: rgba(39,174,96,0.3); border-color: #27ae60; color: #27ae60; }
+  .btn-special { background: rgba(142,68,173,0.3); border-color: #8e44ad; color: #a855f7; }
+  .special-move-row { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); z-index: 200; }
+  .fatality-btn { background: linear-gradient(135deg, #8e44ad, #c0392b); border: 2px solid #f1c40f; color: #f1c40f; font-size: 9px; font-weight: 900; letter-spacing: 1px; padding: 6px 12px; border-radius: 20px; cursor: pointer; touch-action: none; box-shadow: 0 0 15px rgba(142,68,173,0.5); }
+  .announcer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(30px, 8vw, 60px); font-weight: 900; text-align: center; z-index: 300; pointer-events: none; opacity: 0; text-shadow: 4px 4px 0 #000, 0 0 30px currentColor; letter-spacing: 5px; transition: opacity 0.3s; }
+  .announcer.show { opacity: 1; }
+  .announcer.fight { color: var(--blood-red); }
+  .announcer.win { color: var(--gold); }
+  .announcer.ko { color: var(--gold); text-shadow: 0 0 30px var(--gold), 4px 4px 0 #000; }
+  .announcer.special { color: #a855f7; }
+  .hit-effect { position: absolute; font-size: 24px; font-weight: 900; pointer-events: none; z-index: 250; animation: hitFloat 0.6s ease-out forwards; }
+  @keyframes hitFloat { 0% { opacity: 1; transform: scale(1.5) translateY(0); } 100% { opacity: 0; transform: scale(0.8) translateY(-60px); } }
+  #win-screen { background: radial-gradient(ellipse at center, #1a0000 0%, #000 70%); text-align: center; }
+  .win-title { font-size: clamp(36px, 10vw, 80px); font-weight: 900; color: var(--gold); text-shadow: 0 0 30px var(--gold); letter-spacing: 6px; animation: winPulse 1s ease-in-out infinite; }
+  @keyframes winPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .winner-name { font-size: clamp(20px, 5vw, 36px); color: #fff; margin: 10px 0 30px; letter-spacing: 4px; }
+  .wins-text { font-size: clamp(14px, 3.5vw, 22px); color: var(--blood-red); margin-bottom: 30px; letter-spacing: 3px; }
+  .back-btn { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); border: 1px solid #444; color: #aaa; font-size: 12px; padding: 6px 12px; border-radius: 4px; cursor: pointer; z-index: 500; letter-spacing: 1px; touch-action: manipulation; }
+  .player-indicator { font-size: 10px; color: var(--gold); text-align: center; margin-top: 5px; letter-spacing: 2px; }
+  .select-instructions { font-size: clamp(9px, 2.2vw, 12px); color: #888; text-align: center; margin-bottom: 10px; letter-spacing: 1px; }
+  .p1-turn { color: #e74c3c; }
+  .p2-turn { color: var(--cyan); }
+  .vs-divider { font-size: clamp(24px, 6vw, 40px); color: var(--blood-red); text-shadow: 0 0 20px var(--blood-red); font-weight: 900; text-align: center; padding: 10px 0 5px; }
+  .selected-display { display: flex; justify-content: space-around; width: 100%; max-width: 400px; margin: 10px 0; text-align: center; }
+  .sel-box { width: 45%; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 8px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .sel-box.p1 { border: 2px solid #e74c3c; }
+  .sel-box.p2 { border: 2px solid var(--cyan); }
+  .sel-label { font-size: 9px; letter-spacing: 2px; margin-bottom: 4px; }
+  .sel-label.p1 { color: #e74c3c; }
+  .sel-label.p2 { color: var(--cyan); }
+  .sel-name { font-size: clamp(10px, 2.5vw, 14px); font-weight: 900; }
+  .flash { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.3); pointer-events: none; z-index: 400; opacity: 0; transition: opacity 0.1s; }
+  .flash.show { opacity: 1; }
+  .blood-drop { position: absolute; width: 8px; height: 8px; background: #c0392b; border-radius: 50%; pointer-events: none; animation: bloodFall 1s ease-in forwards; z-index: 200; }
+  @keyframes bloodFall { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(80px) scale(0.3); } }
+  @keyframes textFlicker { 0%, 95%, 100% { opacity: 1; } 96% { opacity: 0.8; } 97% { opacity: 1; } 98% { opacity: 0.7; } 99% { opacity: 1; } }
+  .flicker { animation: textFlicker 5s linear infinite; }
+  #char-select { overflow-y: auto; padding: 10px 0; justify-content: flex-start; }
+  #char-select > * { flex-shrink: 0; }
+  .power-full-indicator { font-size: 9px; color: #a855f7; text-align: center; letter-spacing: 2px; animation: powerPulse 0.8s ease-in-out infinite; }
+  @keyframes powerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .fighter-sprite.attack-anim { animation: attackAnim 0.3s ease-out; }
+  .fighter-sprite.hurt-anim { animation: hurtAnim 0.3s ease-out; }
+  .fighter-sprite.jump-anim { animation: jumpAnim 0.5s ease-out; }
+  .fighter-sprite.special-anim { animation: specialAnim 0.5s ease-out; }
+  @keyframes attackAnim { 0% { transform: translateX(0) scaleX(1); } 30% { transform: translateX(20px) scaleX(1); } 100% { transform: translateX(0) scaleX(1); } }
+  @keyframes hurtAnim { 0% { transform: translateX(0); filter: brightness(1); } 30% { transform: translateX(-15px); filter: brightness(3) hue-rotate(30deg); } 100% { transform: translateX(0); filter: brightness(1); } }
+  @keyframes jumpAnim { 0% { transform: translateY(0); } 40% { transform: translateY(-80px); } 100% { transform: translateY(0); } }
+  @keyframes specialAnim { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.2); filter: brightness(2) saturate(3); } 100% { transform: scale(1); filter: brightness(1); } }
+  #p2-sprite.attack-anim { animation: attackAnimP2 0.3s ease-out; }
+  @keyframes attackAnimP2 { 0% { transform: scaleX(-1) translateX(0); } 30% { transform: scaleX(-1) translateX(20px); } 100% { transform: scaleX(-1) translateX(0); } }
+  #p2-sprite.hurt-anim { animation: hurtAnimP2 0.3s ease-out; }
+  @keyframes hurtAnimP2 { 0% { transform: scaleX(-1) translateX(0); filter: brightness(1); } 30% { transform: scaleX(-1) translateX(-15px); filter: brightness(3) hue-rotate(30deg); } 100% { transform: scaleX(-1) translateX(0); filter: brightness(1); } }
+</style>
+<!-- Firebase (Realtime Database) — powers cross-device signup/login/online status/challenges -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-database-compat.min.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCZGHsveALEg5hN4AQWjVb5q3aE0E9_Qrs",
+    authDomain: "mad-fighter-dcfea.firebaseapp.com",
+    // ⚠️ VERIFY THIS: open Firebase console → Realtime Database → the URL shown
+    // at the top of the data view must match exactly (region can vary).
+    databaseURL: "https://mad-fighter-dcfea-default-rtdb.firebaseio.com",
+    projectId: "mad-fighter-dcfea",
+    storageBucket: "mad-fighter-dcfea.firebasestorage.app",
+    messagingSenderId: "65120349308",
+    appId: "1:65120349308:web:d8b8e39fa47f4e538d6df9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+</head>
+<body>
+
+<!-- HOME SCREEN -->
+<div id="home-screen" class="screen active">
+  <div class="fire-bg"></div>
+  <div class="logo-container">
+    <div class="logo-mad flicker">MAD</div>
+    <div class="logo-fighter">FIGHTER</div>
+    <div class="ca-box">CA: Fa7ZE9nCEYnrHsnoeHuhEExJpchtrBtKXnWe6CgHpump</div>
+    <div class="coded-by">CODED BY HARF</div>
+    <div class="dedicated-to">DEDICATED TO $MAD COMMUNITY OF THE MAD DEV</div>
+  </div>
+  <button class="menu-btn" onclick="goToCharSelect('local')">⚔️ LOCAL BATTLE</button>
+  <button class="menu-btn" onclick="showScreen('signup-screen')">🌐 ONLINE BATTLE</button>
+  <div id="music-toggle-btn" onclick="toggleMusic()" style="margin-top:14px;cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.5);border:1px solid #444;border-radius:20px;padding:8px 18px;transition:all 0.2s;user-select:none;">
+    <span id="music-icon" style="font-size:18px;">🔊</span>
+    <span id="music-label" style="font-size:11px;letter-spacing:2px;color:#aaa;">MUSIC: ON</span>
+  </div>
+</div>
+
+<!-- SIGNUP SCREEN -->
+<div id="signup-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="online-box" style="border-color:#f39c12;">
+    <div style="font-size:28px;margin-bottom:4px;">🔥</div>
+    <div class="online-title" style="color:var(--gold);">CREATE ACCOUNT</div>
+    <div style="font-size:10px;color:#777;letter-spacing:1px;margin-bottom:14px;">JOIN THE $MAD FIGHTER COMMUNITY</div>
+    <input class="online-input" id="signup-username" type="text" placeholder="Choose a Username" maxlength="20" autocomplete="off">
+    <input class="online-input" id="signup-password" type="password" placeholder="Choose a Password" maxlength="30">
+    <input class="online-input" id="signup-password2" type="password" placeholder="Confirm Password" maxlength="30">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:12px 0 5px;padding:12px;font-size:14px;" onclick="doSignup()">⚡ CREATE ACCOUNT</button>
+    <div class="online-status" id="signup-status"></div>
+    <div style="margin-top:12px;font-size:11px;color:#666;letter-spacing:1px;">ALREADY HAVE AN ACCOUNT?</div>
+    <button style="background:none;border:none;color:var(--cyan);font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:4px;padding:4px;" onclick="showScreen('login-screen')">→ LOG IN</button>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="online-box" style="border-color:var(--cyan);">
+    <div style="font-size:28px;margin-bottom:4px;">⚔️</div>
+    <div class="online-title">LOG IN</div>
+    <div style="font-size:10px;color:#777;letter-spacing:1px;margin-bottom:14px;">WELCOME BACK, FIGHTER</div>
+    <input class="online-input" id="login-username" type="text" placeholder="Username" maxlength="20" autocomplete="off">
+    <input class="online-input" id="login-password" type="password" placeholder="Password" maxlength="30">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:12px 0 5px;padding:12px;font-size:14px;" onclick="doLogin()">⚔️ ENTER THE ARENA</button>
+    <div class="online-status" id="login-status"></div>
+    <div style="margin-top:12px;font-size:11px;color:#666;letter-spacing:1px;">NEW FIGHTER?</div>
+    <button style="background:none;border:none;color:var(--gold);font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:4px;padding:4px;" onclick="showScreen('signup-screen')">→ CREATE ACCOUNT</button>
+  </div>
+</div>
+
+<!-- LOBBY SCREEN -->
+<div id="lobby-screen" class="screen" style="background:radial-gradient(ellipse at center,#001a1a 0%,#000 80%);overflow-y:auto;justify-content:flex-start;padding-top:50px;">
+  <button class="back-btn" onclick="logoutUser()">← LOGOUT</button>
+  <div style="text-align:center;margin-bottom:12px;width:100%;">
+    <div style="font-size:10px;color:#555;letter-spacing:2px;">LOGGED IN AS</div>
+    <div id="lobby-username-display" style="font-size:20px;font-weight:900;color:var(--gold);letter-spacing:3px;"></div>
+    <div id="lobby-record" style="font-size:10px;color:#888;letter-spacing:2px;margin-top:2px;"></div>
+  </div>
+  <div class="online-box" style="border-color:var(--blood-red);margin-bottom:14px;width:90%;max-width:400px;">
+    <div class="online-title" style="color:var(--blood-red);font-size:16px;">⚔️ CHALLENGE A FIGHTER</div>
+    <input class="online-input" id="challenge-target" type="text" placeholder="Enter opponent username" maxlength="20" autocomplete="off">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:10px 0 0;padding:10px;font-size:13px;" onclick="sendChallenge()">🥊 SEND CHALLENGE</button>
+    <div class="online-status" id="challenge-status" style="margin-top:8px;"></div>
+  </div>
+  <div class="online-box" style="border-color:var(--green);width:90%;max-width:400px;margin-bottom:14px;">
+    <div class="online-title" style="color:var(--green);font-size:15px;">📨 INCOMING CHALLENGES</div>
+    <div id="incoming-challenges" style="min-height:40px;font-size:12px;color:#777;letter-spacing:1px;text-align:center;margin-top:8px;">NO CHALLENGES YET</div>
+  </div>
+  <div class="online-box" style="border-color:#444;width:90%;max-width:400px;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="online-title" style="color:#aaa;font-size:14px;margin:0;">🟢 ONLINE PLAYERS</div>
+      <button onclick="refreshLobby()" style="background:none;border:1px solid #333;color:#777;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;letter-spacing:1px;">REFRESH</button>
+    </div>
+    <div id="online-players-list" style="font-size:12px;color:#777;letter-spacing:1px;text-align:center;">LOADING...</div>
+  </div>
+</div>
+
+<!-- CHARACTER SELECT -->
+<div id="char-select" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="select-title">SELECT FIGHTER</div>
+  <div class="select-instructions" id="select-instructions">
+    <span class="p1-turn">PLAYER 1 — CHOOSE YOUR FIGHTER</span>
+  </div>
+  <div class="selected-display">
+    <div class="sel-box p1" id="p1-sel-box">
+      <div class="sel-label p1">P1</div>
+      <div class="sel-name" id="p1-sel-name">???</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:20px;color:#c0392b;font-weight:900;">VS</div>
+    <div class="sel-box p2" id="p2-sel-box">
+      <div class="sel-label p2">P2</div>
+      <div class="sel-name" id="p2-sel-name">???</div>
+    </div>
+  </div>
+  <div class="fighter-grid" id="fighter-grid"></div>
+  <button class="menu-btn" id="fight-btn" style="display:none; margin-top:10px;" onclick="startFight()">⚔️ FIGHT!</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="game-arena" id="game-arena">
+    <div class="arena-bg"></div>
+    <div class="arena-floor"></div>
+    <div class="skull-decoration" style="left:5%;">💀</div>
+    <div class="skull-decoration" style="right:5%;">💀</div>
+    <div class="flash" id="screen-flash"></div>
+    <div class="hud">
+      <div class="health-section p1-health-section">
+        <div class="fighter-label" id="p1-hud-name">P1</div>
+        <div class="health-bar-outer"><div class="health-bar-inner" id="p1-health-bar" style="width:100%"></div></div>
+      </div>
+      <div class="timer-box"><div class="timer-num" id="timer-display">99</div></div>
+      <div class="health-section p2-health-section">
+        <div class="fighter-label" id="p2-hud-name">P2</div>
+        <div class="health-bar-outer"><div class="health-bar-inner" id="p2-health-bar" style="width:100%; margin-left:auto;"></div></div>
+      </div>
+    </div>
+    <div class="round-display" id="round-display">ROUND 1</div>
+    <div id="game-music-btn" onclick="toggleMusic()" style="position:absolute;top:5px;right:5px;z-index:200;cursor:pointer;background:rgba(0,0,0,0.6);border:1px solid #333;border-radius:14px;padding:3px 8px;font-size:12px;user-select:none;">🔊</div>
+    <div class="fighter-sprite" id="p1-sprite"></div>
+    <div class="fighter-sprite" id="p2-sprite"></div>
+    <div class="announcer" id="announcer"></div>
+    <div class="power-bars">
+      <div class="power-bar-container">
+        <div class="power-label" id="p1-power-label">POWER</div>
+        <div class="power-bar-outer"><div class="power-bar-inner" id="p1-power-bar" style="width:0%"></div></div>
+      </div>
+      <div class="power-bar-container p2-power-container" style="text-align:right;">
+        <div class="power-label" id="p2-power-label">POWER</div>
+        <div class="power-bar-outer"><div class="power-bar-inner" id="p2-power-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="dpad">
+        <div></div>
+        <div class="dpad-btn" id="btn-up" ontouchstart="pressBtn('up',true)" ontouchend="pressBtn('up',false)" onmousedown="pressBtn('up',true)" onmouseup="pressBtn('up',false)">▲</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-left" ontouchstart="pressBtn('left',true)" ontouchend="pressBtn('left',false)" onmousedown="pressBtn('left',true)" onmouseup="pressBtn('left',false)">◀</div>
+        <div class="dpad-btn dpad-center">+</div>
+        <div class="dpad-btn" id="btn-right" ontouchstart="pressBtn('right',true)" ontouchend="pressBtn('right',false)" onmousedown="pressBtn('right',true)" onmouseup="pressBtn('right',false)">▶</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-down" ontouchstart="pressBtn('down',true)" ontouchend="pressBtn('down',false)" onmousedown="pressBtn('down',true)" onmouseup="pressBtn('down',false)">▼</div>
+        <div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <div class="fatality-btn" ontouchstart="useSpecial()" onmousedown="useSpecial()">⚡ SPECIAL</div>
+        <div id="special-ready-text" style="font-size:9px;color:#555;letter-spacing:1px;">FILL POWER BAR</div>
+      </div>
+      <div class="action-btns">
+        <div class="action-btn btn-punch" ontouchstart="doAction('punch')" onmousedown="doAction('punch')">MAD<br>PUNCH</div>
+        <div class="action-btn btn-kick" ontouchstart="doAction('kick')" onmousedown="doAction('kick')">KICK</div>
+        <div class="action-btn btn-block" ontouchstart="doAction('block')" onmousedown="doAction('block')">BLOCK</div>
+        <div class="action-btn btn-special" ontouchstart="doAction('combo')" onmousedown="doAction('combo')">COMBO</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN SCREEN -->
+<div id="win-screen" class="screen">
+  <div class="win-title" id="win-title">WINNER!</div>
+  <div class="winner-name" id="winner-name"></div>
+  <div class="wins-text" id="round-wins-text"></div>
+  <button class="menu-btn" onclick="goToCharSelect('local')">REMATCH</button>
+  <button class="menu-btn" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#aaa;" onclick="showScreen('home-screen')">MAIN MENU</button>
+</div>
+
+<script>
+// ============================================================
+// SOUND ENGINE (defined first so functions are available everywhere)
+// ============================================================
+let audioCtx = null;
+let musicOn = true;
+let musicPlaying = false;
+let bgmGain = null;
+let bgmTimeout = null;
+let ambientPlaying = false;
+let ambientGain = null;
+let ambientTimeout = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSound(type) {
+  if (!musicOn) return;
+  try {
+    const ctx = getAudio();
+    const now = ctx.currentTime;
+    if (type === 'punch') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.7, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
+      src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(now);
+    } else if (type === 'kick') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(180, now); o.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+      g.gain.setValueAtTime(0.9, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.22);
+    } else if (type === 'block') {
+      [200, 400, 600].forEach((freq, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'square'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.15, now + i * 0.01); g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        o.connect(g); g.connect(ctx.destination); o.start(now + i * 0.01); o.stop(now + 0.2);
+      });
+    } else if (type === 'special') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(200, now); f.frequency.exponentialRampToValueAtTime(2000, now + 0.5);
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(80, now); o.frequency.exponentialRampToValueAtTime(400, now + 0.5);
+      g.gain.setValueAtTime(0.8, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      o.connect(f); f.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.6);
+    } else if (type === 'mad') {
+      [0, 0.07, 0.15].forEach((t, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        const freqs = [300, 200, 100];
+        o.frequency.setValueAtTime(freqs[i], now + t); o.frequency.exponentialRampToValueAtTime(freqs[i] * 0.3, now + t + 0.3);
+        g.gain.setValueAtTime(0.7, now + t); g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.35);
+        o.connect(g); g.connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.4);
+      });
+    } else if (type === 'fight') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(150, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.08); o.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+      g.gain.setValueAtTime(0.8, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.45);
+    } else if (type === 'combo') {
+      [0, 0.08, 0.16].forEach((t, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.frequency.value = 300 + i * 80;
+        g.gain.setValueAtTime(0.5, now + t); g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
+        o.connect(g); g.connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.12);
+      });
+    } else if (type === 'jump') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+      g.gain.setValueAtTime(0.3, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.28);
+    } else if (type === 'win') {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'square'; o.frequency.value = freq;
+        const t = now + i * 0.12;
+        g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.28);
+      });
+    } else if (type === 'menu') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(600, now); o.frequency.exponentialRampToValueAtTime(800, now + 0.06);
+      g.gain.setValueAtTime(0.2, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.1);
+    }
+  } catch(e) {}
+}
+
+function playDrum(ctx, dest, time, type) {
+  try {
+    if (type === 'kick') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(150, time); o.frequency.exponentialRampToValueAtTime(30, time + 0.12);
+      g.gain.setValueAtTime(1, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+      o.connect(g); g.connect(dest); o.start(time); o.stop(time + 0.16);
+    } else if (type === 'snare') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1000;
+      g.gain.setValueAtTime(0.6, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+      src.connect(f); f.connect(g); g.connect(dest); src.start(time);
+    } else if (type === 'hihat') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 8000;
+      g.gain.setValueAtTime(0.2, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      src.connect(f); f.connect(g); g.connect(dest); src.start(time);
+    }
+  } catch(e) {}
+}
+
+function startBattleMusic() {
+  if (!musicOn || musicPlaying) return;
+  try {
+    const ctx = getAudio();
+    musicPlaying = true;
+    bgmGain = ctx.createGain(); bgmGain.gain.value = 0.12; bgmGain.connect(ctx.destination);
+    scheduleBGM(ctx.currentTime);
+  } catch(e) {}
+}
+
+function stopBattleMusic() {
+  musicPlaying = false;
+  if (bgmTimeout) clearTimeout(bgmTimeout);
+  if (bgmGain) {
+    try { if (audioCtx) bgmGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3); } catch(e) {}
+    setTimeout(() => { try { bgmGain.disconnect(); } catch(e) {} bgmGain = null; }, 500);
+  }
+}
+
+function scheduleBGM(startTime) {
+  if (!musicPlaying || !bgmGain) return;
+  try {
+    const ctx = getAudio(); const bpm = 140; const beat = 60 / bpm; const bar = beat * 4; const loopLen = bar * 4;
+    [0, beat * 2].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'kick'));
+    [beat, beat * 3].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'snare'));
+    for (let i = 0; i < 8; i++) playDrum(ctx, bgmGain, startTime + i * beat * 0.5, 'hihat');
+    playDrum(ctx, bgmGain, startTime + beat * 0.5, 'kick');
+    [bar, bar + beat * 2, bar + beat * 0.75].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'kick'));
+    [bar + beat, bar + beat * 3].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'snare'));
+    for (let i = 0; i < 8; i++) playDrum(ctx, bgmGain, startTime + bar + i * beat * 0.5, 'hihat');
+    const bassNotes = [55, 55, 73, 73, 65, 65, 49, 49];
+    bassNotes.forEach((freq, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+      o.type = 'sawtooth'; o.frequency.value = freq;
+      const t = startTime + i * beat * 0.5;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.02);
+      g.gain.setValueAtTime(0.5, t + beat * 0.4); g.gain.linearRampToValueAtTime(0, t + beat * 0.5);
+      o.connect(f); f.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + beat * 0.52);
+    });
+    const melNotes = [220, 246, 261, 293, 329, 293, 261, 220, 246, 293, 329, 440, 392, 329, 293, 261];
+    melNotes.forEach((freq, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      const t = startTime + bar * 2 + i * beat * 0.5;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      g.gain.setValueAtTime(0.12, t + beat * 0.35); g.gain.linearRampToValueAtTime(0, t + beat * 0.5);
+      o.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + beat * 0.52);
+    });
+    const remaining = (startTime + loopLen - ctx.currentTime) * 1000 - 200;
+    bgmTimeout = setTimeout(() => { if (musicPlaying && bgmGain) scheduleBGM(startTime + loopLen); }, Math.max(100, remaining));
+  } catch(e) { musicPlaying = false; }
+}
+
+function startAmbientMusic() {
+  if (!musicOn || ambientPlaying) return;
+  try {
+    const ctx = getAudio();
+    ambientPlaying = true;
+    ambientGain = ctx.createGain(); ambientGain.gain.value = 0.08; ambientGain.connect(ctx.destination);
+    scheduleAmbient(ctx.currentTime);
+  } catch(e) {}
+}
+
+function stopAmbientMusic() {
+  ambientPlaying = false;
+  if (ambientTimeout) clearTimeout(ambientTimeout);
+  if (ambientGain) {
+    try { if (audioCtx) ambientGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5); } catch(e) {}
+    setTimeout(() => { try { ambientGain.disconnect(); } catch(e) {} ambientGain = null; }, 600);
+  }
+}
+
+function scheduleAmbient(startTime) {
+  if (!ambientPlaying || !ambientGain) return;
+  try {
+    const ctx = getAudio(); const beat = 60 / 90; const loopLen = beat * 8;
+    const chords = [[110, 138, 165], [98, 123, 147], [117, 147, 175], [87, 110, 131]];
+    chords.forEach((chord, ci) => {
+      chord.forEach(freq => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        const t = startTime + ci * beat * 2;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.3, t + beat * 0.5);
+        g.gain.setValueAtTime(0.3, t + beat * 1.5); g.gain.linearRampToValueAtTime(0, t + beat * 2);
+        o.connect(g); g.connect(ambientGain); o.start(t); o.stop(t + beat * 2.1);
+      });
+    });
+    for (let i = 0; i < 2; i++) playDrum(ctx, ambientGain, startTime + i * beat * 4, 'kick');
+    const remaining = (startTime + loopLen - ctx.currentTime) * 1000 - 200;
+    ambientTimeout = setTimeout(() => { if (ambientPlaying && ambientGain) scheduleAmbient(startTime + loopLen); }, Math.max(100, remaining));
+  } catch(e) { ambientPlaying = false; }
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  const icon = document.getElementById('music-icon');
+  const label = document.getElementById('music-label');
+  const gameBtn = document.getElementById('game-music-btn');
+  if (icon) icon.textContent = musicOn ? '🔊' : '🔇';
+  if (label) label.textContent = musicOn ? 'MUSIC: ON' : 'MUSIC: OFF';
+  if (gameBtn) gameBtn.textContent = musicOn ? '🔊' : '🔇';
+  if (!musicOn) { stopBattleMusic(); stopAmbientMusic(); }
+  else {
+    const gameVisible = document.getElementById('game-screen').classList.contains('active');
+    const homeVisible = document.getElementById('home-screen').classList.contains('active');
+    if (gameVisible) startBattleMusic();
+    else if (homeVisible) startAmbientMusic();
+  }
+}
+
+// ============================================================
+// FIGHTER HEAD ART (shared angry-face head, embedded as base64)
+// ============================================================
+const FIGHTER_HEAD_IMG = "data:image/jpeg;base64,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888888888840Cq4FKThZfdEW08888888884N9czfyeaeaSOFGEV88888884EawCCCKGCSGiCGyTm9888884wsiSWuOyOGCCCCSCayO58884UIOFL+C+2mCGOOKuCEOpc0888HNKE146+mGO2++iW5sCezR88teiKCPA2jC2+++u1S6qCCt9chZ7GOmAgB1TrWM+AARgSOiK22j8SOay3AAmJd+alRAgH22+GDAgiSe+WtIQdGeySmOBRWCDCiZFqK6+mCC9w72uCiCzy6xDDCbjQFuG7fKiSGCaqGaqSGDDHDajKeqWeDmCLGSPn7iaNweCLLCuHBdgNqLDDjDXuWKIOoiL7PbCezZFVQCvrC6SFQ/LGGV4SWbODCzEQoWeLmODGcyGqCCyCKiH2DOPBR8B4v2BjvyCCCCCGGKkCPvuDlN8KAOSKJOriiGKCCCC6LEXmaN88sIWDhxKiCiiiOKCWOvSO7VF8885BRPaeyC+WSCCCCCqTcHc888889N3LemCDmCmHam6aiBE8888888JIBU/OKGKW62qzfBU8888888888BBVo6cjnYczBX9888888888888cYMxN81NIRF8888888//EACkRAQABAQUIAwEBAQAAAAAAAAERACExQVFhECAwcYGRodGxweHwQPH/2gAIAQMBAT8Q4AOxCp1oVPKopo8cUkqCYMzYfvSgxJ09n1VydZX8q750KMv2Ks5XMKOsDlZ8RVvOtbT6fNSnkTtfSqMNOTiFLiGJXfvSo/Ub9FxQCwqOBArXMse/uinpV5zPsqC+kjgBUllOQIwYnnkaUKKAuDiRNBMWRh6NP4wvGkjfksKM5gTDV1yP8Fyo3OejpUNIWJSRuhFAR2LmbnyNlhvEQbJnLPjW2WAL1nTLZEKw7MuZhUDDuChbqXIL/VBRAIDYXDM5fl9R/P8AE99aEn/i/LhP3gMWpW0c13Qx50jRQuXFz6bSE/rce9DHaFWN43TD3tCCk/J3hh+VYlvh5mNQf1TycOTQzab8Emwi/rlUQUYRd1zaNqxvfo1qLFYBtviks0S6mIQljTQUh+K3lj4ojKw3HZsPLkUFEuB/fFDFQ3Im85P1RlBZWH01GMrUlpOXbYphRcjPpXYPMvYqaHWb/wApK8rQgiYwbmoorIi45absgFhPXH3Q2JSwQc38N3nQet3jbe8AHNqeOgT8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";
+
+// ============================================================
+// CHARACTER DATA
+// ============================================================
+const CHARACTERS = [
+  { id:0, name:"MAD DEV", title:"The Creator", color:"#c0392b", accent:"#e74c3c", special:"CODE BLAST", specialDesc:"Fires a devastating burst of code energy", bodyColor:"#1a1a2e", skinColor:"#d4a76a", hairColor:"#2c3e50", outfitColor:"#c0392b", glowColor:"#e74c3c", power:{attack:9,defense:7,speed:8} },
+  { id:1, name:"CRYPTOGURU", title:"The Oracle", color:"#f39c12", accent:"#f1c40f", special:"CRYPTO STORM", specialDesc:"Summons digital gold to crush enemies", bodyColor:"#2c1654", skinColor:"#c8a882", hairColor:"#7f8c8d", outfitColor:"#8e44ad", glowColor:"#f39c12", power:{attack:8,defense:8,speed:7} },
+  { id:2, name:"HARF", title:"The Engineer", color:"#27ae60", accent:"#2ecc71", special:"SYSTEM HACK", specialDesc:"Overloads opponent's neural system", bodyColor:"#1a2e1a", skinColor:"#dbb899", hairColor:"#1a1a1a", outfitColor:"#27ae60", glowColor:"#2ecc71", power:{attack:10,defense:6,speed:9} },
+  { id:3, name:"TOOSURE", title:"The Confident", color:"#3498db", accent:"#5dade2", special:"SURE SHOT", specialDesc:"Unleashes an unstoppable force of pure confidence", bodyColor:"#0d2137", skinColor:"#c89878", hairColor:"#2c3e50", outfitColor:"#3498db", glowColor:"#5dade2", power:{attack:8,defense:9,speed:8} },
+  { id:4, name:"MAD GURU", title:"The Wise", color:"#e67e22", accent:"#f0a500", special:"MADNESS WAVE", specialDesc:"Channels pure madness into a devastating wave", bodyColor:"#2e1a00", skinColor:"#b8894a", hairColor:"#6b4c11", outfitColor:"#e67e22", glowColor:"#f0a500", power:{attack:7,defense:10,speed:7} },
+  { id:5, name:"AKWAHK", title:"The Phantom", color:"#00bcd4", accent:"#00e5ff", special:"SHADOW STRIKE", specialDesc:"Vanishes and reappears for a phantom attack", bodyColor:"#001a1a", skinColor:"#a0c0c0", hairColor:"#004d4d", outfitColor:"#006064", glowColor:"#00e5ff", power:{attack:9,defense:7,speed:10} },
+  { id:6, name:"MADRICH", title:"The Wealthy", color:"#f1c40f", accent:"#ffd700", special:"GOLD RAIN", specialDesc:"Rains golden coins that obliterate enemies", bodyColor:"#1a1500", skinColor:"#d4a020", hairColor:"#8b6914", outfitColor:"#b8860b", glowColor:"#ffd700", power:{attack:8,defense:8,speed:8} },
+];
+
+// Per-character accessory worn ABOVE/AROUND the shared angry-face head
+// (keeps each fighter visually distinct even though all heads use the same art)
+function headAccessory(char) {
+  const h = char.hairColor, g = char.glowColor;
+  switch (char.id) {
+    case 0: // MAD DEV — tech earpieces + signal antenna
+      return '<rect x="18" y="17" width="5" height="9" rx="2" fill="' + h + '" opacity="0.85"/><rect x="47" y="17" width="5" height="9" rx="2" fill="' + h + '" opacity="0.85"/>' +
+             '<line x1="35" y1="6" x2="35" y2="1" stroke="' + g + '" stroke-width="2"/><circle cx="35" cy="1" r="2" fill="' + g + '"/>';
+    case 1: // CRYPTOGURU — mystic headband with gem
+      return '<path d="M20 14 Q35 5 50 14" stroke="' + h + '" stroke-width="4" fill="none"/><polygon points="35,4 38,9 32,9" fill="' + g + '"/>';
+    case 2: // HARF — tech halo ring
+      return '<ellipse cx="35" cy="4" rx="10" ry="2.5" fill="none" stroke="' + g + '" stroke-width="1.5" opacity="0.85"/>';
+    case 3: // TOOSURE — confident headscarf knot
+      return '<path d="M20 12 Q35 2 50 12 L50 17 Q35 9 20 17 Z" fill="' + h + '" opacity="0.85"/>';
+    case 4: // MAD GURU — crown of wisdom
+      return '<polygon points="22,10 26,1 31,8 35,0 39,8 44,1 48,10" fill="' + g + '"/><rect x="21" y="9" width="28" height="4" rx="1" fill="' + g + '"/>';
+    case 5: // AKWAHK — phantom hood
+      return '<path d="M18 19 Q19 2 35 2 Q51 2 52 19 Q35 9 18 19 Z" fill="' + h + '" opacity="0.92"/>';
+    case 6: // MADRICH — gold crown
+      return '<polygon points="21,11 26,1 35,7 44,1 49,11" fill="' + h + '"/><rect x="20" y="10" width="30" height="5" rx="2" fill="' + h + '"/><circle cx="35" cy="0" r="2.2" fill="#fff8dc"/>';
+    default: return '';
+  }
+}
+
+// Per-character body accessory (cloak/cape/aura) layered onto the humanoid torso
+function bodyAccessory(char) {
+  const o = char.outfitColor, g = char.glowColor;
+  switch (char.id) {
+    case 1: return '<polygon points="35,45 22,102 48,102" fill="' + o + '" opacity="0.55"/>'; // flowing cloak
+    case 2: return '<rect x="29" y="55" width="12" height="7" rx="1" fill="' + g + '" opacity="0.5"/>'; // chest panel
+    case 3: return '<path d="M19,38 Q8,72 14,102 L20,102 L24,62 L34,62 L38,102 L46,102 Q52,72 41,38 Z" fill="' + o + '" opacity="0.4"/>'; // coat tails
+    case 5: return '<ellipse cx="35" cy="76" rx="22" ry="10" fill="' + g + '" opacity="0.12"/>'; // shadow aura
+    case 6: return '<path d="M22 40 Q35 44 48 40" stroke="' + g + '" stroke-width="2" fill="none" opacity="0.8"/>'; // gold trim
+    default: return '';
+  }
+}
+
+function drawFighter(char) {
+  const c = char.bodyColor, s = char.skinColor, o = char.outfitColor, h = char.hairColor, g = char.glowColor;
+  return '<svg viewBox="0 0 70 140" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="fighter-svg" style="filter: drop-shadow(0 0 8px ' + g + ')">' +
+    '<defs><clipPath id="headClip"><circle cx="35" cy="20" r="15"/></clipPath></defs>' +
+    '<ellipse cx="35" cy="135" rx="18" ry="4" fill="rgba(0,0,0,0.5)"/>' +
+    // legs — tapered, slightly bent for a more natural humanoid stance
+    '<path d="M29,87 Q26,108 25,126" stroke="' + o + '" stroke-width="12" fill="none" stroke-linecap="round"/>' +
+    '<path d="M41,87 Q44,108 45,126" stroke="' + o + '" stroke-width="12" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="24" cy="130" rx="8" ry="5" fill="' + h + '"/><ellipse cx="46" cy="130" rx="8" ry="5" fill="' + h + '"/>' +
+    // torso — curved trapezoid (broad shoulders, narrow waist) instead of a flat block
+    '<path d="M20,40 Q35,33 50,40 Q49,65 46,88 Q35,94 24,88 Q21,65 20,40 Z" fill="' + o + '"/>' +
+    '<path d="M20,40 Q35,33 50,40 Q49,50 48,58 Q35,52 22,58 Q21,50 20,40 Z" fill="' + c + '" opacity="0.35"/>' +
+    '<circle cx="35" cy="63" r="7" fill="' + g + '" opacity="0.3"/>' +
+    '<text x="35" y="67" text-anchor="middle" font-size="8" fill="' + g + '" font-weight="bold" opacity="0.9">$M</text>' +
+    '<rect x="21" y="84" width="28" height="6" rx="2" fill="' + h + '" opacity="0.85"/>' +
+    bodyAccessory(char) +
+    // arms — shoulder-elbow-fist with rounded joints, more natural than straight rectangles
+    '<path d="M19,42 Q8,52 7,68" stroke="' + o + '" stroke-width="11" fill="none" stroke-linecap="round"/>' +
+    '<path d="M7,68 Q6,80 8,90" stroke="' + s + '" stroke-width="9" fill="none" stroke-linecap="round"/>' +
+    '<circle cx="9" cy="93" r="6.5" fill="' + s + '"/>' +
+    '<path d="M51,42 Q62,52 63,68" stroke="' + o + '" stroke-width="11" fill="none" stroke-linecap="round"/>' +
+    '<path d="M63,68 Q64,80 62,90" stroke="' + s + '" stroke-width="9" fill="none" stroke-linecap="round"/>' +
+    '<circle cx="61" cy="93" r="6.5" fill="' + s + '"/>' +
+    // neck
+    '<rect x="30" y="32" width="10" height="9" rx="3" fill="' + s + '"/>' +
+    // head — shared angry-face artwork, clipped into a circle
+    '<circle cx="35" cy="20" r="16.5" fill="' + g + '" opacity="0.25"/>' +
+    '<image href="' + FIGHTER_HEAD_IMG + '" xlink:href="' + FIGHTER_HEAD_IMG + '" x="19" y="4" width="32" height="32" clip-path="url(#headClip)" preserveAspectRatio="xMidYMid slice"/>' +
+    '<circle cx="35" cy="20" r="15" fill="none" stroke="' + g + '" stroke-width="2"/>' +
+    headAccessory(char) +
+    '<ellipse cx="35" cy="70" rx="33" ry="70" fill="' + g + '" opacity="0.04"/>' +
+    '</svg>';
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let gameMode = 'local';
+let isOnlineMatch = false;
+let p1Char = null, p2Char = null;
+let selectStep = 0;
+let gameState = {
+  p1HP: 100, p2HP: 100, p1Power: 0, p2Power: 0,
+  p1Blocking: false, p2Blocking: false,
+  round: 1, p1Wins: 0, p2Wins: 0,
+  timeLeft: 99, gameRunning: false,
+  timerInterval: null, aiInterval: null,
+};
+let pressedKeys = {};
+
+// ============================================================
+// SCREEN NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Only touch audio if AudioContext is already running (requires prior user gesture)
+  if (!audioCtx) return;
+  try {
+    if (id === 'home-screen') { stopBattleMusic(); setTimeout(startAmbientMusic, 200); }
+    else if (id === 'game-screen') { stopAmbientMusic(); }
+    else { stopAmbientMusic(); stopBattleMusic(); }
+  } catch(e) {}
+}
+
+function goToCharSelect(mode, online) {
+  if (audioCtx) { try { playSound('menu'); stopBattleMusic(); stopAmbientMusic(); } catch(e) {} }
+  gameMode = mode;
+  isOnlineMatch = !!online;
+  selectStep = 0; p1Char = null; p2Char = null;
+  document.getElementById('p1-sel-name').textContent = '???';
+  document.getElementById('p2-sel-name').textContent = '???';
+  document.getElementById('fight-btn').style.display = 'none';
+  document.getElementById('select-instructions').innerHTML = '<span class="p1-turn">PLAYER 1 — CHOOSE YOUR FIGHTER</span>';
+  renderCharGrid();
+  showScreen('char-select');
+}
+
+// ============================================================
+// CHARACTER SELECT
+// ============================================================
+function renderCharGrid() {
+  const grid = document.getElementById('fighter-grid');
+  grid.innerHTML = '';
+  CHARACTERS.forEach((char, i) => {
+    const div = document.createElement('div');
+    div.className = 'fighter-card';
+    div.id = 'card-' + i;
+    if (p1Char && p1Char.id === i) div.classList.add('selected');
+    if (p2Char && p2Char.id === i) div.classList.add('p2-selected');
+    div.innerHTML = '<div class="fighter-avatar">' + drawFighter(char) + '</div><div class="fighter-name" style="color:' + char.color + '">' + char.name + '</div><div class="fighter-power-badge">⚡ ' + char.special + '</div>';
+    div.addEventListener('click', () => selectChar(i));
+    div.addEventListener('touchstart', (e) => { e.preventDefault(); selectChar(i); }, { passive: false });
+    grid.appendChild(div);
+  });
+}
+
+function selectChar(i) {
+  if (selectStep === 0) {
+    p1Char = CHARACTERS[i];
+    document.getElementById('p1-sel-name').textContent = p1Char.name;
+    document.getElementById('p1-sel-name').style.color = p1Char.color;
+    selectStep = 1;
+    document.getElementById('select-instructions').innerHTML = '<span class="p2-turn">PLAYER 2 — CHOOSE YOUR FIGHTER</span>';
+    renderCharGrid();
+  } else if (selectStep === 1) {
+    p2Char = CHARACTERS[i];
+    document.getElementById('p2-sel-name').textContent = p2Char.name;
+    document.getElementById('p2-sel-name').style.color = p2Char.color;
+    document.getElementById('fight-btn').style.display = 'block';
+    document.getElementById('select-instructions').innerHTML = '<span style="color:#27ae60">✓ READY TO FIGHT!</span>';
+    renderCharGrid();
+  }
+}
+
+// ============================================================
+// FIGHT
+// ============================================================
+function startFight() {
+  if (!p1Char || !p2Char) return;
+  resetRound();
+  showScreen('game-screen');
+  document.getElementById('p1-hud-name').textContent = p1Char.name;
+  document.getElementById('p2-hud-name').textContent = p2Char.name;
+  document.getElementById('round-display').textContent = 'ROUND ' + gameState.round;
+  document.getElementById('p1-sprite').innerHTML = drawFighter(p1Char);
+  document.getElementById('p2-sprite').innerHTML = drawFighter(p2Char);
+  showAnnouncer('FIGHT!', 'fight', 1500);
+  playSound('fight');
+  setTimeout(() => {
+    startBattleMusic();
+    gameState.gameRunning = true;
+    startTimer();
+    if (gameMode === 'ai') startAI();
+  }, 1500);
+}
+
+function resetRound() {
+  clearInterval(gameState.timerInterval);
+  clearInterval(gameState.aiInterval);
+  gameState.p1HP = 100; gameState.p2HP = 100;
+  gameState.p1Power = 0; gameState.p2Power = 0;
+  gameState.p1Blocking = false; gameState.p2Blocking = false;
+  gameState.timeLeft = 99; gameState.gameRunning = false;
+  updateHealthBars(); updatePowerBars();
+  document.getElementById('timer-display').textContent = '99';
+  document.getElementById('special-ready-text').textContent = 'FILL POWER BAR';
+  document.getElementById('special-ready-text').style.color = '#555';
+}
+
+function startTimer() {
+  gameState.timerInterval = setInterval(() => {
+    if (!gameState.gameRunning) return;
+    gameState.timeLeft--;
+    document.getElementById('timer-display').textContent = gameState.timeLeft;
+    if (gameState.timeLeft <= 10) document.getElementById('timer-display').style.color = '#e74c3c';
+    else document.getElementById('timer-display').style.color = '#f39c12';
+    if (gameState.timeLeft <= 0) timeUp();
+  }, 1000);
+}
+
+// ============================================================
+// COMBAT ACTIONS
+// ============================================================
+let lastAction = 0;
+const ACTION_COOLDOWN = 300;
+
+function doAction(type) {
+  if (!gameState.gameRunning) return;
+  const now = Date.now();
+  if (now - lastAction < ACTION_COOLDOWN) return;
+  lastAction = now;
+
+  if (type === 'block') {
+    playSound('block');
+    gameState.p1Blocking = true;
+    animateFighter('p1', 'block');
+    setTimeout(() => { gameState.p1Blocking = false; }, 600);
+    return;
+  }
+
+  let damage = 0, hitText = '', powerGain = 0;
+  if (type === 'punch') {
+    playSound('punch');
+    damage = 8 + Math.floor(Math.random() * 7);
+    hitText = getHitText('punch'); powerGain = 12;
+    animateFighter('p1', 'attack');
+  } else if (type === 'kick') {
+    playSound('kick');
+    damage = 11 + Math.floor(Math.random() * 9);
+    hitText = getHitText('kick'); powerGain = 15;
+    animateFighter('p1', 'attack');
+  } else if (type === 'combo') {
+    playSound('combo');
+    damage = 15 + Math.floor(Math.random() * 10);
+    hitText = 'COMBO!'; powerGain = 20;
+    animateFighter('p1', 'attack');
+  }
+
+  if (gameState.p2Blocking && Math.random() > 0.4) {
+    damage = Math.floor(damage * 0.15);
+    hitText = 'BLOCKED';
+    showHitText(hitText, 'p2', '#00bcd4');
+  } else {
+    applyDamage('p2', damage);
+    showHitText(hitText, 'p2', p1Char.glowColor);
+    spawnBlood('p2');
+    flashScreen();
+  }
+
+  gainPower('p1', powerGain);
+  setTimeout(() => aiCounter(), 200 + Math.random() * 500);
+}
+
+function useSpecial() {
+  if (!gameState.gameRunning) return;
+  if (gameState.p1Power < 100) {
+    showHitText('NEED MORE POWER!', 'p1', '#888');
+    return;
+  }
+  playSound('special');
+  gameState.p1Power = 0;
+  updatePowerBars();
+  document.getElementById('special-ready-text').textContent = 'FILL POWER BAR';
+  document.getElementById('special-ready-text').style.color = '#555';
+  const damage = 35 + Math.floor(Math.random() * 20);
+  animateFighter('p1', 'special');
+  showAnnouncer(p1Char.special + '!', 'special', 1200);
+  setTimeout(() => {
+    applyDamage('p2', damage);
+    spawnBlood('p2');
+    flashScreen();
+    showHitText('💥 ' + damage, 'p2', p1Char.glowColor);
+  }, 400);
+}
+
+function pressBtn(dir, down) {
+  pressedKeys[dir] = down;
+  if (!gameState.gameRunning) return;
+  const btn = document.getElementById('btn-' + dir);
+  if (btn) down ? btn.classList.add('pressed') : btn.classList.remove('pressed');
+  if (down) {
+    if (dir === 'up') { playSound('jump'); animateFighter('p1', 'jump'); gainPower('p1', 5); }
+    else if (dir === 'left' || dir === 'right') { gainPower('p1', 2); }
+    else if (dir === 'down') { gameState.p1Blocking = true; animateFighter('p1', 'block'); setTimeout(() => { gameState.p1Blocking = false; }, 500); }
+  }
+}
+
+function gainPower(player, amount) {
+  if (player === 'p1') {
+    gameState.p1Power = Math.min(100, gameState.p1Power + amount);
+    if (gameState.p1Power >= 100) {
+      document.getElementById('special-ready-text').textContent = '⚡ SPECIAL READY!';
+      document.getElementById('special-ready-text').style.color = '#a855f7';
+    }
+  } else {
+    gameState.p2Power = Math.min(100, gameState.p2Power + amount);
+  }
+  updatePowerBars();
+}
+
+// ============================================================
+// AI
+// ============================================================
+function startAI() {
+  gameState.aiInterval = setInterval(() => {
+    if (!gameState.gameRunning) return;
+    const r = Math.random();
+    if (r < 0.15) aiCounter();
+  }, 1200);
+}
+
+function aiCounter() {
+  if (!gameState.gameRunning) return;
+  const actions = ['punch', 'punch', 'kick', 'combo', 'block'];
+  const action = actions[Math.floor(Math.random() * actions.length)];
+  if (action === 'block') {
+    gameState.p2Blocking = true; animateFighter('p2', 'block');
+    setTimeout(() => { gameState.p2Blocking = false; }, 500);
+    return;
+  }
+  const damage = action === 'punch' ? 6 + Math.floor(Math.random() * 6) : action === 'kick' ? 9 + Math.floor(Math.random() * 8) : 12 + Math.floor(Math.random() * 8);
+  animateFighter('p2', 'attack'); gainPower('p2', 12);
+  if (gameState.p1Blocking && Math.random() > 0.5) {
+    showHitText('BLOCKED', 'p1', '#00bcd4');
+  } else {
+    applyDamage('p1', damage);
+    showHitText(getHitText(action), 'p1', p2Char.glowColor);
+    spawnBlood('p1');
+  }
+  if (gameState.p2Power >= 100 && Math.random() > 0.5) {
+    gameState.p2Power = 0; updatePowerBars();
+    const sDmg = 30 + Math.floor(Math.random() * 20);
+    setTimeout(() => {
+      animateFighter('p2', 'special');
+      applyDamage('p1', sDmg);
+      showHitText('⚡ ' + sDmg, 'p1', p2Char.glowColor);
+      flashScreen();
+    }, 200);
+  }
+}
+
+function getHitText(type) {
+  const punches = ['MAD PUNCH!', 'MAD HIT!', 'MAD POW!', 'MAD BAM!', 'MAD CRACK!'];
+  const kicks = ['KICK!', 'SLAM!', 'BASH!', 'CRUSH!', 'WHAM!'];
+  if (type === 'punch') return punches[Math.floor(Math.random() * punches.length)];
+  if (type === 'kick') return kicks[Math.floor(Math.random() * kicks.length)];
+  return 'COMBO!';
+}
+
+// ============================================================
+// DAMAGE & HEALTH
+// ============================================================
+function applyDamage(player, damage) {
+  if (player === 'p1') { gameState.p1HP = Math.max(0, gameState.p1HP - damage); animateFighter('p1', 'hurt'); gainPower('p1', 8); }
+  else { gameState.p2HP = Math.max(0, gameState.p2HP - damage); animateFighter('p2', 'hurt'); gainPower('p2', 8); }
+  updateHealthBars();
+  if (gameState.p1HP <= 0 || gameState.p2HP <= 0) roundEnd();
+}
+
+function updateHealthBars() {
+  const p1Bar = document.getElementById('p1-health-bar');
+  const p2Bar = document.getElementById('p2-health-bar');
+  p1Bar.style.width = gameState.p1HP + '%';
+  p2Bar.style.width = gameState.p2HP + '%';
+  const setColor = (bar, hp) => { bar.classList.remove('low','medium'); if (hp <= 25) bar.classList.add('low'); else if (hp <= 50) bar.classList.add('medium'); };
+  setColor(p1Bar, gameState.p1HP); setColor(p2Bar, gameState.p2HP);
+}
+
+function updatePowerBars() {
+  document.getElementById('p1-power-bar').style.width = gameState.p1Power + '%';
+  document.getElementById('p2-power-bar').style.width = gameState.p2Power + '%';
+}
+
+// ============================================================
+// ROUND / MATCH END
+// ============================================================
+function roundEnd() {
+  gameState.gameRunning = false;
+  clearInterval(gameState.timerInterval);
+  clearInterval(gameState.aiInterval);
+  let winner;
+  if (gameState.p1HP <= 0 && gameState.p2HP <= 0) winner = 'DRAW';
+  else if (gameState.p1HP <= 0) { winner = 'p2'; gameState.p2Wins++; }
+  else { winner = 'p1'; gameState.p1Wins++; }
+
+  if (winner === 'DRAW') showAnnouncer('DRAW!', 'ko', 2000);
+  else { showAnnouncer('$MAD!', 'ko', 2000); playSound('mad'); }
+
+  setTimeout(() => {
+    if (gameState.p1Wins >= 2 || gameState.p2Wins >= 2) {
+      stopBattleMusic();
+      showFinalWin(winner);
+      playSound('win');
+    } else {
+      gameState.round++;
+      document.getElementById('round-display').textContent = 'ROUND ' + gameState.round;
+      resetRound();
+      document.getElementById('p1-sprite').innerHTML = drawFighter(p1Char);
+      document.getElementById('p2-sprite').innerHTML = drawFighter(p2Char);
+      showAnnouncer('ROUND ' + gameState.round, 'fight', 1500);
+      setTimeout(() => { gameState.gameRunning = true; startTimer(); if (gameMode === 'ai') startAI(); }, 1500);
+    }
+  }, 2200);
+}
+
+function timeUp() {
+  if (gameState.p1HP > gameState.p2HP) { gameState.p1Wins++; showAnnouncer('TIME!', 'ko', 2000); setTimeout(() => showFinalWin('p1'), 2200); }
+  else if (gameState.p2HP > gameState.p1HP) { gameState.p2Wins++; showAnnouncer('TIME!', 'ko', 2000); setTimeout(() => showFinalWin('p2'), 2200); }
+  else { showAnnouncer('DRAW!', 'ko', 2000); setTimeout(() => goToCharSelect('local'), 2500); }
+}
+
+function showFinalWin(player) {
+  clearInterval(gameState.timerInterval); clearInterval(gameState.aiInterval);
+  gameState.gameRunning = false;
+  const winnerChar = player === 'p1' ? p1Char : p2Char;
+  document.getElementById('win-title').textContent = player === 'DRAW' ? 'DRAW!' : 'WINNER!';
+  document.getElementById('winner-name').textContent = player === 'DRAW' ? 'BOTH FIGHTERS' : winnerChar.name;
+  document.getElementById('winner-name').style.color = player === 'DRAW' ? '#aaa' : winnerChar.color;
+  document.getElementById('round-wins-text').textContent = 'P1: ' + gameState.p1Wins + ' — P2: ' + gameState.p2Wins;
+  recordOnlineResult(player);
+  showScreen('win-screen');
+}
+
+// ============================================================
+// VISUAL EFFECTS
+// ============================================================
+function showAnnouncer(text, type, duration) {
+  const el = document.getElementById('announcer');
+  el.textContent = text; el.className = 'announcer ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showHitText(text, target, color) {
+  const arena = document.getElementById('game-arena');
+  const el = document.createElement('div');
+  el.className = 'hit-effect'; el.textContent = text; el.style.color = color;
+  el.style.fontFamily = 'Arial Black, sans-serif'; el.style.fontWeight = '900';
+  el.style.textShadow = '0 0 10px ' + color;
+  el.style.left = (target === 'p1' ? '20%' : '60%');
+  el.style.top = (30 + Math.random() * 20) + '%';
+  arena.appendChild(el); setTimeout(() => el.remove(), 700);
+}
+
+function flashScreen() {
+  const f = document.getElementById('screen-flash');
+  f.classList.add('show'); setTimeout(() => f.classList.remove('show'), 150);
+}
+
+function spawnBlood(target) {
+  const arena = document.getElementById('game-arena');
+  const x = target === 'p1' ? 20 : 60;
+  for (let i = 0; i < 4; i++) {
+    const drop = document.createElement('div'); drop.className = 'blood-drop';
+    drop.style.left = (x + Math.random() * 15) + '%';
+    drop.style.top = (40 + Math.random() * 20) + '%';
+    const sz = (4 + Math.random() * 8) + 'px';
+    drop.style.width = sz; drop.style.height = sz;
+    arena.appendChild(drop); setTimeout(() => drop.remove(), 1000);
+  }
+}
+
+const animCooldown = { p1: false, p2: false };
+function animateFighter(player, type) {
+  if (animCooldown[player]) return;
+  animCooldown[player] = true;
+  const el = document.getElementById(player + '-sprite');
+  el.classList.add(type + '-anim');
+  setTimeout(() => { el.classList.remove(type + '-anim'); animCooldown[player] = false; }, type === 'jump' ? 550 : 350);
+}
+
+// ============================================================
+// AUTH & LOBBY (Firebase Realtime Database — real cross-device sync)
+// ============================================================
+let currentUser = null;
+let lobbyInterval = null;
+let onlineListenerRef = null, onlineListenerFn = null;
+let challengeListenerRef = null, challengeListenerFn = null;
+
+function userRef(username) { return db.ref('users/' + username.toLowerCase()); }
+function onlineRef(username) { return db.ref('online/' + username.toLowerCase()); }
+
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id); if (!el) return;
+  el.textContent = msg; el.className = 'online-status' + (type ? ' status-' + type : '');
+}
+
+async function doSignup() {
+  const u = document.getElementById('signup-username').value.trim();
+  const p = document.getElementById('signup-password').value;
+  const p2 = document.getElementById('signup-password2').value;
+  if (!u || u.length < 3) return setStatus('signup-status', '⚠ Username must be at least 3 characters!', 'error');
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) return setStatus('signup-status', '⚠ Only letters, numbers and _ allowed!', 'error');
+  if (!p || p.length < 4) return setStatus('signup-status', '⚠ Password must be at least 4 characters!', 'error');
+  if (p !== p2) return setStatus('signup-status', '⚠ Passwords do not match!', 'error');
+  setStatus('signup-status', 'Checking availability...', 'waiting');
+  try {
+    const snap = await userRef(u).get();
+    if (snap.exists()) return setStatus('signup-status', '⚠ Username already taken!', 'error');
+    await userRef(u).set({ username: u, password: btoa(p), wins: 0, losses: 0, joined: Date.now() });
+    setStatus('signup-status', '✅ Account created! Logging you in...', 'connected');
+    setTimeout(() => loginAs(u), 1000);
+  } catch (e) {
+    setStatus('signup-status', '⚠ Could not reach the server. Check your connection and try again.', 'error');
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById('login-username').value.trim();
+  const p = document.getElementById('login-password').value;
+  if (!u || !p) return setStatus('login-status', '⚠ Enter username and password!', 'error');
+  setStatus('login-status', 'Connecting...', 'waiting');
+  try {
+    const snap = await userRef(u).get();
+    if (!snap.exists()) return setStatus('login-status', '⚠ Username not found!', 'error');
+    const rec = snap.val();
+    if (rec.password !== btoa(p)) return setStatus('login-status', '⚠ Wrong password!', 'error');
+    setStatus('login-status', '✅ Welcome back, ' + rec.username + '!', 'connected');
+    setTimeout(() => loginAs(rec.username), 800);
+  } catch (e) {
+    setStatus('login-status', '⚠ Could not reach the server. Check your connection and try again.', 'error');
+  }
+}
+
+async function loginAs(username) {
+  currentUser = username;
+  const myOnlineRef = onlineRef(username);
+  try {
+    await myOnlineRef.set({ username, lastSeen: Date.now() });
+    myOnlineRef.onDisconnect().remove(); // auto-clears presence if the tab closes or connection drops
+  } catch (e) {}
+  document.getElementById('lobby-username-display').textContent = username.toUpperCase();
+  try {
+    const snap = await userRef(username).get();
+    if (snap.exists()) {
+      const rec = snap.val();
+      document.getElementById('lobby-record').textContent = 'W: ' + (rec.wins || 0) + '  L: ' + (rec.losses || 0);
+    }
+  } catch (e) {}
+  showScreen('lobby-screen');
+  startLobbyListeners();
+  if (lobbyInterval) clearInterval(lobbyInterval);
+  lobbyInterval = setInterval(() => { if (currentUser) onlineRef(currentUser).update({ lastSeen: Date.now() }).catch(()=>{}); }, 15000);
+}
+
+async function logoutUser() {
+  stopLobbyListeners();
+  if (currentUser) { try { await onlineRef(currentUser).remove(); } catch (e) {} }
+  currentUser = null;
+  if (lobbyInterval) clearInterval(lobbyInterval);
+  showScreen('home-screen');
+}
+
+// Live presence — updates instantly on every connected device the moment
+// someone signs in or disconnects, instead of waiting on a polling timer.
+function startLobbyListeners() {
+  stopLobbyListeners();
+  onlineListenerRef = db.ref('online');
+  onlineListenerFn = onlineListenerRef.on('value', snap => renderOnlinePlayers(snap.val() || {}), () => {});
+  challengeListenerRef = db.ref('challenges');
+  challengeListenerFn = challengeListenerRef.on('value', snap => renderIncomingChallenges(snap.val() || {}), () => {});
+}
+
+function stopLobbyListeners() {
+  if (onlineListenerRef && onlineListenerFn) onlineListenerRef.off('value', onlineListenerFn);
+  if (challengeListenerRef && challengeListenerFn) challengeListenerRef.off('value', challengeListenerFn);
+  onlineListenerRef = onlineListenerFn = challengeListenerRef = challengeListenerFn = null;
+}
+
+function renderOnlinePlayers(data) {
+  if (!currentUser) return;
+  const list = document.getElementById('online-players-list');
+  if (!list) return;
+  const now = Date.now();
+  const others = Object.values(data).filter(p => p && p.username && p.username.toLowerCase() !== currentUser.toLowerCase() && now - p.lastSeen < 60000);
+  if (others.length === 0) {
+    list.innerHTML = '<div style="color:#555;padding:10px;">NO OTHER PLAYERS ONLINE<br><span style="font-size:10px;color:#333;">SHARE THE GAME LINK TO INVITE FRIENDS!</span></div>';
+  } else {
+    list.innerHTML = others.map(p => '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;"><span style="color:#2ecc71;font-weight:700;letter-spacing:1px;">🟢 ' + p.username.toUpperCase() + '</span><button onclick="quickChallenge(\'' + p.username + '\')" style="background:rgba(192,57,43,0.3);border:1px solid #c0392b;color:#e74c3c;font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:1px;">CHALLENGE</button></div>').join('');
+  }
+}
+
+function renderIncomingChallenges(data) {
+  if (!currentUser) return;
+  const incomingEl = document.getElementById('incoming-challenges');
+  if (!incomingEl) return;
+  const now = Date.now();
+  const mine = Object.entries(data)
+    .map(([id, c]) => (c ? Object.assign({}, c, { id }) : null))
+    .filter(c => c && c.to && c.to.toLowerCase() === currentUser.toLowerCase() && now - c.time < 60000);
+  if (mine.length === 0) {
+    incomingEl.innerHTML = '<div style="color:#555;padding:8px;">NO CHALLENGES YET</div>';
+  } else {
+    incomingEl.innerHTML = mine.map(c => '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;"><span style="color:var(--gold);font-size:12px;">⚔️ ' + c.from.toUpperCase() + '</span><div style="display:flex;gap:5px;"><button onclick="acceptChallenge(\'' + c.from + '\',\'' + c.id + '\')" style="background:rgba(39,174,96,0.3);border:1px solid #27ae60;color:#27ae60;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;">ACCEPT</button><button onclick="declineChallenge(\'' + c.id + '\')" style="background:rgba(192,57,43,0.2);border:1px solid #444;color:#888;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;">DECLINE</button></div></div>').join('');
+  }
+}
+
+// Manual refresh button — listeners already keep things live, this just
+// re-pings presence in case this device's connection had hiccuped.
+function refreshLobby() {
+  if (!currentUser) return;
+  onlineRef(currentUser).update({ lastSeen: Date.now() }).catch(() => {});
+}
+
+function quickChallenge(username) { document.getElementById('challenge-target').value = username; sendChallenge(); }
+
+async function sendChallenge() {
+  const target = document.getElementById('challenge-target').value.trim();
+  if (!target) return setStatus('challenge-status', '⚠ Enter a username!', 'error');
+  if (target.toLowerCase() === currentUser.toLowerCase()) return setStatus('challenge-status', '⚠ You cannot challenge yourself!', 'error');
+  setStatus('challenge-status', 'Searching for player...', 'waiting');
+  try {
+    const snap = await onlineRef(target).get();
+    if (!snap.exists()) return setStatus('challenge-status', '⚠ ' + target + ' is not online!', 'error');
+    const id = 'ch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    await db.ref('challenges/' + id).set({ id, from: currentUser, to: target, time: Date.now() });
+    setStatus('challenge-status', '✅ Challenge sent to ' + target.toUpperCase() + '! Waiting...', 'waiting');
+  } catch (e) {
+    setStatus('challenge-status', '⚠ Connection error. Try again.', 'error');
+  }
+}
+
+async function acceptChallenge(fromUser, challengeId) {
+  try { await db.ref('challenges/' + challengeId).remove(); } catch (e) {}
+  gameMode = 'ai';
+  setStatus('challenge-status', '✅ Challenge accepted! Loading arena...', 'connected');
+  setTimeout(() => { goToCharSelect('ai', true); }, 1000);
+}
+
+async function declineChallenge(challengeId) {
+  try { await db.ref('challenges/' + challengeId).remove(); } catch (e) {}
+}
+
+// Record a win/loss on the logged-in user's account after an online match
+async function recordOnlineResult(winner) {
+  if (!isOnlineMatch || !currentUser || winner === 'DRAW') return;
+  const field = winner === 'p1' ? 'wins' : 'losses';
+  try {
+    await userRef(currentUser).update({ [field]: firebase.database.ServerValue.increment(1) });
+    const snap = await userRef(currentUser).get();
+    if (snap.exists()) {
+      const rec = snap.val();
+      const display = document.getElementById('lobby-record');
+      if (display) display.textContent = 'W: ' + (rec.wins || 0) + '  L: ' + (rec.losses || 0);
+    }
+  } catch (e) {}
+}
+
+// ============================================================
+// KEYBOARD SUPPORT
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (!gameState.gameRunning) return;
+  switch(e.key) {
+    case 'ArrowLeft': pressBtn('left', true); break;
+    case 'ArrowRight': pressBtn('right', true); break;
+    case 'ArrowUp': pressBtn('up', true); break;
+    case 'ArrowDown': pressBtn('down', true); break;
+    case 'z': case 'Z': doAction('punch'); break;
+    case 'x': case 'X': doAction('kick'); break;
+    case 'c': case 'C': doAction('block'); break;
+    case 'v': case 'V': doAction('combo'); break;
+    case ' ': useSpecial(); break;
+  }
+});
+document.addEventListener('keyup', (e) => {
+  switch(e.key) {
+    case 'ArrowLeft': pressBtn('left', false); break;
+    case 'ArrowRight': pressBtn('right', false); break;
+    case 'ArrowUp': pressBtn('up', false); break;
+    case 'ArrowDown': pressBtn('down', false); break;
+  }
+});
+
+document.getElementById('game-screen').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// Start ambient music on first interaction
+document.addEventListener('click', function startOnFirstClick() {
+  if (musicOn) startAmbientMusic();
+  document.removeEventListener('click', startOnFirstClick);
+}, { once: true });
+document.addEventListener('touchstart', fun…
