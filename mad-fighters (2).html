@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MAD Robotics Fight - $MAD Community</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --blood-red: #c0392b; --gold: #f39c12; --dark-gold: #d68910;
+    --neon-yellow: #f1c40f; --deep-black: #0a0a0a; --dark-bg: #111;
+    --purple: #8e44ad; --cyan: #00bcd4; --green: #27ae60; --orange: #e67e22;
+  }
+  body { font-family: 'Arial Black', sans-serif; background: #000; color: #fff; overflow: hidden; height: 100vh; width: 100vw; touch-action: manipulation; }
+  .screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #home-screen { background: radial-gradient(ellipse at center, #1a0000 0%, #000 70%); position: relative; overflow: hidden; }
+  #home-screen::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,0,0,0.03) 2px, rgba(255,0,0,0.03) 4px); pointer-events: none; }
+  .fire-bg { position: absolute; bottom: 0; left: 0; right: 0; height: 200px; background: linear-gradient(to top, rgba(192,57,43,0.4), rgba(243,156,18,0.2), transparent); animation: fireFlicker 2s ease-in-out infinite alternate; pointer-events: none; z-index: 1; }
+  @keyframes fireFlicker { 0% { opacity: 0.6; transform: scaleY(1); } 100% { opacity: 1; transform: scaleY(1.05); } }
+  .logo-container { text-align: center; z-index: 10; margin-bottom: 20px; }
+  .logo-mad { font-size: clamp(48px, 12vw, 100px); font-weight: 900; color: var(--blood-red); text-shadow: 0 0 20px #ff0000, 0 0 40px #ff000066, 4px 4px 0 #000; letter-spacing: 8px; animation: logoGlow 2s ease-in-out infinite alternate; line-height: 1; }
+  .logo-fighter { font-size: clamp(16px, 4.2vw, 32px); color: var(--gold); letter-spacing: 6px; text-shadow: 0 0 15px var(--gold); margin-top: -5px; white-space: nowrap; }
+  @keyframes logoGlow { 0% { text-shadow: 0 0 20px #ff0000, 0 0 40px #ff000066, 4px 4px 0 #000; } 100% { text-shadow: 0 0 40px #ff0000, 0 0 80px #ff0000aa, 4px 4px 0 #300; } }
+  .ca-box { background: rgba(0,0,0,0.7); border: 1px solid var(--gold); border-radius: 8px; padding: 8px 16px; margin: 10px 0; font-size: clamp(8px, 2vw, 12px); color: var(--gold); letter-spacing: 1px; word-break: break-all; text-align: center; max-width: 90vw; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, transform 0.1s; }
+  .ca-box:active { background: rgba(243,156,18,0.15); transform: scale(0.98); }
+  .ca-box.copied { border-color: var(--green); color: var(--green); }
+  .coded-by { font-size: clamp(11px, 2.5vw, 14px); color: #aaa; margin: 6px 0 2px; letter-spacing: 2px; }
+  .dedicated-to { font-size: clamp(10px, 2.2vw, 13px); color: var(--gold); opacity: 0.8; letter-spacing: 1px; margin-bottom: 20px; }
+  .menu-btn { position: relative; z-index: 20; background: linear-gradient(135deg, var(--blood-red), #7b0000); border: 2px solid var(--gold); color: var(--gold); font-size: clamp(14px, 3.5vw, 20px); font-weight: 900; letter-spacing: 3px; padding: 14px 40px; margin: 8px; cursor: pointer; border-radius: 4px; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 20px rgba(192,57,43,0.5); min-width: 220px; touch-action: manipulation; -webkit-tap-highlight-color: rgba(0,0,0,0); pointer-events: auto; }
+  .menu-btn:hover, .menu-btn:active { background: linear-gradient(135deg, #e74c3c, var(--blood-red)); box-shadow: 0 0 30px var(--blood-red); transform: scale(1.03); }
+  #char-select { background: radial-gradient(ellipse at center, #0a0a1a 0%, #000 80%); }
+  .select-title { font-size: clamp(18px, 5vw, 32px); color: var(--gold); text-shadow: 0 0 20px var(--gold); letter-spacing: 4px; margin-bottom: 15px; text-align: center; }
+  .fighter-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 10px; width: 100%; max-width: 700px; }
+  .fighter-card { background: rgba(20,20,30,0.9); border: 2px solid #333; border-radius: 8px; padding: 8px 5px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  .fighter-card:hover, .fighter-card:active, .fighter-card.selected { border-color: var(--gold); box-shadow: 0 0 20px rgba(243,156,18,0.5); transform: scale(1.05); background: rgba(243,156,18,0.1); }
+  .fighter-card.p2-selected { border-color: var(--cyan); box-shadow: 0 0 20px rgba(0,188,212,0.5); background: rgba(0,188,212,0.1); }
+  .fighter-avatar { width: 54px; height: 92px; margin: 0 auto 5px; position: relative; }
+  .fighter-name { font-size: clamp(7px, 1.8vw, 10px); color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+  .fighter-power-badge { font-size: 8px; color: var(--neon-yellow); margin-top: 2px; opacity: 0.8; }
+  #online-screen { background: radial-gradient(ellipse at center, #001a1a 0%, #000 80%); padding: 20px; }
+  .online-box { background: rgba(0,0,0,0.8); border: 2px solid var(--cyan); border-radius: 12px; padding: 25px; width: 90%; max-width: 400px; text-align: center; }
+  .online-title { font-size: clamp(16px, 4vw, 24px); color: var(--cyan); text-shadow: 0 0 15px var(--cyan); letter-spacing: 3px; margin-bottom: 20px; }
+  .online-input { width: 100%; padding: 12px; background: rgba(255,255,255,0.08); border: 2px solid #444; border-radius: 6px; color: #fff; font-size: 16px; margin: 8px 0; outline: none; letter-spacing: 1px; }
+  .online-input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(0,188,212,0.3); }
+  .online-input::placeholder { color: #666; }
+  .online-status { margin: 12px 0; padding: 10px; border-radius: 6px; font-size: 13px; min-height: 36px; }
+  .status-waiting { background: rgba(243,156,18,0.2); border: 1px solid var(--gold); color: var(--gold); }
+  .status-connected { background: rgba(39,174,96,0.2); border: 1px solid var(--green); color: var(--green); }
+  .status-error { background: rgba(192,57,43,0.2); border: 1px solid var(--blood-red); color: #ff6b6b; }
+  #game-screen { background: #000; position: relative; overflow: hidden; }
+  .game-arena { width: 100%; height: 100%; position: relative; background: linear-gradient(180deg, #0d0d2b 0%, #1a0a00 60%, #2d1200 80%, #1a0800 100%); overflow: hidden; }
+  .arena-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse 80% 30% at 50% 20%, rgba(80,0,0,0.3) 0%, transparent 70%), repeating-linear-gradient(90deg, transparent, transparent 49px, rgba(255,255,255,0.03) 50px); }
+  .arena-floor { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(180deg, rgba(150,60,0,0.5), #3d1f00); border-top: 3px solid rgba(255,150,0,0.4); box-shadow: 0 -10px 40px rgba(255,100,0,0.2); }
+  .skull-decoration { position: absolute; bottom: 90px; font-size: 24px; opacity: 0.3; }
+  .hud { position: absolute; top: 0; left: 0; right: 0; padding: 8px; display: flex; align-items: center; gap: 8px; z-index: 100; background: rgba(0,0,0,0.7); }
+  .health-section { flex: 1; }
+  .p1-health-section { text-align: left; }
+  .p2-health-section { text-align: right; }
+  .fighter-label { font-size: clamp(9px, 2.2vw, 12px); color: var(--gold); letter-spacing: 2px; margin-bottom: 3px; text-transform: uppercase; }
+  .health-bar-outer { height: 14px; background: #111; border: 2px solid #444; border-radius: 3px; overflow: hidden; position: relative; }
+  .health-bar-inner { height: 100%; background: linear-gradient(90deg, #27ae60, #2ecc71); transition: width 0.2s ease; position: relative; }
+  .health-bar-inner.low { background: linear-gradient(90deg, #c0392b, #e74c3c); }
+  .health-bar-inner.medium { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+  .p2-health-section .health-bar-inner { margin-left: auto; background: linear-gradient(90deg, #2ecc71, #27ae60); }
+  .timer-box { background: rgba(0,0,0,0.8); border: 2px solid var(--gold); border-radius: 6px; padding: 4px 10px; text-align: center; min-width: 50px; }
+  .timer-num { font-size: clamp(18px, 5vw, 28px); font-weight: 900; color: var(--gold); }
+  .round-display { position: absolute; top: 65px; left: 50%; transform: translateX(-50%); font-size: clamp(10px, 2.5vw, 14px); color: #aaa; letter-spacing: 3px; z-index: 100; }
+  .power-bars { position: absolute; bottom: 125px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 10px; z-index: 100; }
+  .power-bar-container { width: 45%; }
+  .power-label { font-size: 9px; color: #aaa; margin-bottom: 2px; letter-spacing: 1px; }
+  .power-bar-outer { height: 8px; background: #111; border: 1px solid #333; border-radius: 2px; overflow: hidden; }
+  .power-bar-inner { height: 100%; background: linear-gradient(90deg, #8e44ad, #a855f7); transition: width 0.3s; }
+  .p2-power-container .power-bar-inner { background: linear-gradient(90deg, #a855f7, #8e44ad); }
+  .fighter-sprite { position: absolute; bottom: 120px; width: 76px; height: 178px; cursor: pointer; transition: transform 0.1s; image-rendering: pixelated; }
+  #p1-sprite { left: 18%; }
+  #p2-sprite { left: 82%; transform: scaleX(-1); }
+  .fighter-svg { width: 100%; height: 100%; }
+  .controls { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; background: rgba(0,0,0,0.85); border-top: 2px solid #222; z-index: 200; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 44px); grid-template-rows: repeat(3, 44px); gap: 3px; }
+  .dpad-btn { background: rgba(50,50,50,0.9); border: 2px solid #444; border-radius: 6px; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; transition: background 0.1s; -webkit-tap-highlight-color: transparent; }
+  .dpad-btn:active, .dpad-btn.pressed { background: rgba(192,57,43,0.6); border-color: var(--blood-red); }
+  .dpad-center { background: rgba(30,30,30,0.5); border-color: #333; }
+  .action-btns { display: grid; grid-template-columns: repeat(2, 50px); grid-template-rows: repeat(2, 50px); gap: 6px; }
+  .action-btn { border-radius: 50%; border: 3px solid; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; letter-spacing: 0px; text-align: center; line-height: 1.1; -webkit-tap-highlight-color: transparent; transition: transform 0.1s, box-shadow 0.1s; }
+  .action-btn:active, .action-btn.pressed { transform: scale(0.9); filter: brightness(1.4); }
+  .btn-punch { background: rgba(192,57,43,0.3); border-color: #e74c3c; color: #e74c3c; }
+  .btn-kick { background: rgba(243,156,18,0.3); border-color: #f39c12; color: #f39c12; }
+  .btn-block { background: rgba(39,174,96,0.3); border-color: #27ae60; color: #27ae60; }
+  .btn-special { background: rgba(142,68,173,0.3); border-color: #8e44ad; color: #a855f7; }
+  .special-move-row { position: absolute; bottom: 125px; left: 50%; transform: translateX(-50%); z-index: 200; }
+  .fatality-btn { background: linear-gradient(135deg, #8e44ad, #c0392b); border: 2px solid #f1c40f; color: #f1c40f; font-size: 9px; font-weight: 900; letter-spacing: 1px; padding: 6px 12px; border-radius: 20px; cursor: pointer; touch-action: none; box-shadow: 0 0 15px rgba(142,68,173,0.5); }
+  .announcer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: clamp(30px, 8vw, 60px); font-weight: 900; text-align: center; z-index: 300; pointer-events: none; opacity: 0; text-shadow: 4px 4px 0 #000, 0 0 30px currentColor; letter-spacing: 5px; transition: opacity 0.3s; }
+  .announcer.show { opacity: 1; }
+  .announcer.fight { color: var(--blood-red); }
+  .announcer.win { color: var(--gold); }
+  .announcer.ko { color: var(--gold); text-shadow: 0 0 30px var(--gold), 4px 4px 0 #000; }
+  .announcer.special { color: #a855f7; }
+  .hit-effect { position: absolute; font-size: 24px; font-weight: 900; pointer-events: none; z-index: 250; animation: hitFloat 0.6s ease-out forwards; }
+  @keyframes hitFloat { 0% { opacity: 1; transform: scale(1.5) translateY(0); } 100% { opacity: 0; transform: scale(0.8) translateY(-60px); } }
+  #win-screen { background: radial-gradient(ellipse at center, #1a0000 0%, #000 70%); text-align: center; }
+  .win-title { font-size: clamp(36px, 10vw, 80px); font-weight: 900; color: var(--gold); text-shadow: 0 0 30px var(--gold); letter-spacing: 6px; animation: winPulse 1s ease-in-out infinite; }
+  @keyframes winPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  .winner-name { font-size: clamp(20px, 5vw, 36px); color: #fff; margin: 10px 0 30px; letter-spacing: 4px; }
+  .wins-text { font-size: clamp(14px, 3.5vw, 22px); color: var(--blood-red); margin-bottom: 30px; letter-spacing: 3px; }
+  .back-btn { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.7); border: 1px solid #444; color: #aaa; font-size: 12px; padding: 6px 12px; border-radius: 4px; cursor: pointer; z-index: 500; letter-spacing: 1px; touch-action: manipulation; }
+  .player-indicator { font-size: 10px; color: var(--gold); text-align: center; margin-top: 5px; letter-spacing: 2px; }
+  .select-instructions { font-size: clamp(9px, 2.2vw, 12px); color: #888; text-align: center; margin-bottom: 10px; letter-spacing: 1px; }
+  .p1-turn { color: #e74c3c; }
+  .p2-turn { color: var(--cyan); }
+  .vs-divider { font-size: clamp(24px, 6vw, 40px); color: var(--blood-red); text-shadow: 0 0 20px var(--blood-red); font-weight: 900; text-align: center; padding: 10px 0 5px; }
+  .selected-display { display: flex; justify-content: space-around; width: 100%; max-width: 400px; margin: 10px 0; text-align: center; }
+  .sel-box { width: 45%; background: rgba(0,0,0,0.5); border-radius: 8px; padding: 8px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .sel-box.p1 { border: 2px solid #e74c3c; }
+  .sel-box.p2 { border: 2px solid var(--cyan); }
+  .sel-label { font-size: 9px; letter-spacing: 2px; margin-bottom: 4px; }
+  .sel-label.p1 { color: #e74c3c; }
+  .sel-label.p2 { color: var(--cyan); }
+  .sel-name { font-size: clamp(10px, 2.5vw, 14px); font-weight: 900; }
+  .flash { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.3); pointer-events: none; z-index: 400; opacity: 0; transition: opacity 0.1s; }
+  .flash.show { opacity: 1; }
+  .blood-drop { position: absolute; width: 8px; height: 8px; background: #c0392b; border-radius: 50%; pointer-events: none; animation: bloodFall 1s ease-in forwards; z-index: 200; }
+  @keyframes bloodFall { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(80px) scale(0.3); } }
+  @keyframes textFlicker { 0%, 95%, 100% { opacity: 1; } 96% { opacity: 0.8; } 97% { opacity: 1; } 98% { opacity: 0.7; } 99% { opacity: 1; } }
+  .flicker { animation: textFlicker 5s linear infinite; }
+  #char-select { overflow-y: auto; padding: 10px 0; justify-content: flex-start; }
+  #char-select > * { flex-shrink: 0; }
+  .power-full-indicator { font-size: 9px; color: #a855f7; text-align: center; letter-spacing: 2px; animation: powerPulse 0.8s ease-in-out infinite; }
+  @keyframes powerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  /* ===== LIMB RIG ===== every joint group has transform-box set to its own bounding
+     box so 'rotate()' pivots around that joint's anchor point instead of the SVG origin */
+  .fighter-svg g.head-group, .fighter-svg g.torso-group {
+    transform-box: fill-box; transform-origin: center; transition: transform 0.1s ease-out;
+  }
+  .fighter-svg g.limb-shoulder, .fighter-svg g.limb-hip {
+    transform-box: fill-box; transform-origin: top center; transition: transform 0.1s ease-out;
+  }
+  .fighter-svg .limb-knee, .fighter-svg .limb-elbow { transform-box: fill-box; transform-origin: top center; }
+  /* steady heartbeat — proof of life, blood pumping beneath the skin */
+  .heartbeat-pulse { animation: heartbeat 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes heartbeat { 0%, 100% { opacity: 0.3; transform: scale(1); } 20% { opacity: 0.55; transform: scale(1.12); } 35% { opacity: 0.3; transform: scale(1); } 45% { opacity: 0.5; transform: scale(1.07); } 60% { opacity: 0.3; transform: scale(1); } }
+
+  /* idle — soft human breathing: chest rises/falls, weight rocks gently, head settles with it */
+  .fighter-sprite.idle .limb-front-leg, .fighter-sprite.idle .limb-back-leg { animation: idleLegSway 2.2s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.idle .torso-group { animation: idleBreathe 2.2s cubic-bezier(0.45,0,0.55,1) infinite; transform-origin: 50% 100%; }
+  .fighter-sprite.idle .head-group { animation: idleHeadDrift 2.2s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.idle .limb-front-arm, .fighter-sprite.idle .limb-back-arm { animation: idleArmSway 2.2s cubic-bezier(0.45,0,0.55,1) infinite; }
+  @keyframes idleLegSway { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(1.2deg); } }
+  @keyframes idleBreathe { 0%,100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.025); } }
+  @keyframes idleHeadDrift { 0%,100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-1.5px) rotate(-1deg); } }
+  @keyframes idleArmSway { 0%,100% { transform: rotate(0deg); } 50% { transform: rotate(-2deg); } }
+
+  /* WALK / MOVE — natural gait: opposite arm/leg pairs swing together, hips dip, torso counter-twists with weight shift */
+  .fighter-sprite.walking .limb-front-leg { animation: walkFrontLeg 0.62s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.walking .limb-back-leg { animation: walkBackLeg 0.62s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.walking .limb-front-arm { animation: walkBackArm 0.62s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.walking .limb-back-arm { animation: walkFrontArm 0.62s cubic-bezier(0.45,0,0.55,1) infinite; }
+  .fighter-sprite.walking .torso-group { animation: walkTorsoBob 0.62s cubic-bezier(0.45,0,0.55,1) infinite; transform-origin: 50% 100%; }
+  .fighter-sprite.walking .head-group { animation: walkHeadBob 0.62s cubic-bezier(0.45,0,0.55,1) infinite; }
+  @keyframes walkFrontLeg { 0%,100% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } }
+  @keyframes walkBackLeg { 0%,100% { transform: rotate(-18deg); } 50% { transform: rotate(18deg); } }
+  @keyframes walkFrontArm { 0%,100% { transform: rotate(16deg); } 50% { transform: rotate(-16deg); } }
+  @keyframes walkBackArm { 0%,100% { transform: rotate(-16deg); } 50% { transform: rotate(16deg); } }
+  @keyframes walkTorsoBob { 0%,50%,100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-3px) rotate(3deg); } 75% { transform: translateY(-3px) rotate(-3deg); } }
+  @keyframes walkHeadBob { 0%,50%,100% { transform: translateY(0); } 25%,75% { transform: translateY(-2px); } }
+
+  /* PUNCH — front shoulder drives forward, elbow extends, opposite leg plants */
+  .fighter-sprite.punch-anim .limb-front-arm { animation: punchShoulder 0.3s ease-out; }
+  .fighter-sprite.punch-anim .limb-front-arm .limb-elbow { animation: punchElbow 0.3s ease-out; }
+  .fighter-sprite.punch-anim .torso-group { animation: punchTorso 0.3s ease-out; }
+  @keyframes punchShoulder { 0% { transform: rotate(0deg); } 35% { transform: rotate(-95deg); } 100% { transform: rotate(0deg); } }
+  @keyframes punchElbow { 0% { transform: rotate(0deg); } 35% { transform: rotate(-25deg); } 100% { transform: rotate(0deg); } }
+  @keyframes punchTorso { 0% { transform: translateX(0) rotate(0deg); } 35% { transform: translateX(3px) rotate(-4deg); } 100% { transform: translateX(0) rotate(0deg); } }
+
+  /* KICK — front leg drives the hip forward and the knee snaps the shin out */
+  .fighter-sprite.kick-anim .limb-front-leg { animation: kickHip 0.35s ease-out; }
+  .fighter-sprite.kick-anim .limb-front-leg .limb-knee { animation: kickKnee 0.35s ease-out; }
+  .fighter-sprite.kick-anim .torso-group { animation: kickTorso 0.35s ease-out; }
+  @keyframes kickHip { 0% { transform: rotate(0deg); } 40% { transform: rotate(-70deg); } 100% { transform: rotate(0deg); } }
+  @keyframes kickKnee { 0% { transform: rotate(0deg); } 40% { transform: rotate(35deg); } 100% { transform: rotate(0deg); } }
+  @keyframes kickTorso { 0% { transform: rotate(0deg); } 40% { transform: rotate(-6deg); } 100% { transform: rotate(0deg); } }
+
+  /* COMBO — quick double-arm flurry, both shoulders alternate */
+  .fighter-sprite.combo-anim .limb-front-arm { animation: comboFront 0.45s ease-out; }
+  .fighter-sprite.combo-anim .limb-back-arm { animation: comboBack 0.45s ease-out; }
+  @keyframes comboFront { 0% { transform: rotate(0deg); } 25% { transform: rotate(-85deg); } 50% { transform: rotate(0deg); } 75% { transform: rotate(-60deg); } 100% { transform: rotate(0deg); } }
+  @keyframes comboBack { 0% { transform: rotate(0deg); } 35% { transform: rotate(75deg); } 60% { transform: rotate(0deg); } 85% { transform: rotate(55deg); } 100% { transform: rotate(0deg); } }
+
+  /* BLOCK — both arms raise and cross in front of the head/torso */
+  .fighter-sprite.block-anim .limb-front-arm { animation: blockFront 0.5s ease-out forwards; }
+  .fighter-sprite.block-anim .limb-back-arm { animation: blockBack 0.5s ease-out forwards; }
+  @keyframes blockFront { 0% { transform: rotate(0deg); } 100% { transform: rotate(-145deg); } }
+  @keyframes blockBack { 0% { transform: rotate(0deg); } 100% { transform: rotate(120deg); } }
+
+  /* JUMP — both legs tuck up under the body mid-air */
+  .fighter-sprite.jump-anim .limb-front-leg, .fighter-sprite.jump-anim .limb-back-leg { animation: jumpLegTuck 0.5s ease-out; }
+  .fighter-sprite.jump-anim .limb-front-leg .limb-knee, .fighter-sprite.jump-anim .limb-back-leg .limb-knee { animation: jumpKneeTuck 0.5s ease-out; }
+  @keyframes jumpLegTuck { 0% { transform: rotate(0deg); } 40% { transform: rotate(28deg); } 100% { transform: rotate(0deg); } }
+  @keyframes jumpKneeTuck { 0% { transform: rotate(0deg); } 40% { transform: rotate(60deg); } 100% { transform: rotate(0deg); } }
+
+  /* SPECIAL — torso winds up and explodes forward, both arms thrust out */
+  .fighter-sprite.special-anim .limb-front-arm { animation: specialFront 0.5s ease-out; }
+  .fighter-sprite.special-anim .limb-back-arm { animation: specialBack 0.5s ease-out; }
+  .fighter-sprite.special-anim .torso-group { animation: specialTorso 0.5s ease-out; }
+  @keyframes specialFront { 0% { transform: rotate(0deg); } 30% { transform: rotate(35deg); } 60% { transform: rotate(-100deg); } 100% { transform: rotate(0deg); } }
+  @keyframes specialBack { 0% { transform: rotate(0deg); } 30% { transform: rotate(-35deg); } 60% { transform: rotate(100deg); } 100% { transform: rotate(0deg); } }
+  @keyframes specialTorso { 0% { transform: scale(1); } 30% { transform: scale(0.92); } 60% { transform: scale(1.1); } 100% { transform: scale(1); } }
+
+  /* HURT — head/torso recoil, whole sprite still flashes via the existing whole-body keyframe below */
+  .fighter-sprite.hurt-anim .head-group { animation: hurtHead 0.3s ease-out; }
+  @keyframes hurtHead { 0% { transform: rotate(0deg); } 30% { transform: rotate(12deg); } 100% { transform: rotate(0deg); } }
+
+  /* ===== WHOLE-SPRITE MOVEMENT (lunge/recoil/jump-height/flash) kept from before ===== */
+  .fighter-sprite.attack-anim { animation: attackAnim 0.3s ease-out; }
+  .fighter-sprite.hurt-anim { animation: hurtAnim 0.3s ease-out, hurtHead 0.3s ease-out; }
+  .fighter-sprite.jump-anim { animation: jumpAnim 0.5s ease-out, jumpLegTuck 0.5s ease-out; }
+  .fighter-sprite.special-anim { animation: specialAnim 0.5s ease-out; }
+  @keyframes attackAnim { 0% { transform: translateX(0) scaleX(1); } 30% { transform: translateX(20px) scaleX(1); } 100% { transform: translateX(0) scaleX(1); } }
+  @keyframes hurtAnim { 0% { transform: translateX(0); filter: brightness(1); } 30% { transform: translateX(-15px); filter: brightness(3) hue-rotate(30deg); } 100% { transform: translateX(0); filter: brightness(1); } }
+  @keyframes jumpAnim { 0% { transform: translateY(0); } 40% { transform: translateY(-80px); } 100% { transform: translateY(0); } }
+  @keyframes specialAnim { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.2); filter: brightness(2) saturate(3); } 100% { transform: scale(1); filter: brightness(1); } }
+  #p2-sprite.attack-anim { animation: attackAnimP2 0.3s ease-out; }
+  @keyframes attackAnimP2 { 0% { transform: scaleX(-1) translateX(0); } 30% { transform: scaleX(-1) translateX(20px); } 100% { transform: scaleX(-1) translateX(0); } }
+  #p2-sprite.hurt-anim { animation: hurtAnimP2 0.3s ease-out; }
+  @keyframes hurtAnimP2 { 0% { transform: scaleX(-1) translateX(0); filter: brightness(1); } 30% { transform: scaleX(-1) translateX(-15px); filter: brightness(3) hue-rotate(30deg); } 100% { transform: scaleX(-1) translateX(0); filter: brightness(1); } }
+</style>
+</style>
+<!-- Firebase (Realtime Database) — powers cross-device signup/login/online status/challenges -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/12.3.0/firebase-database-compat.min.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCZGHsveALEg5hN4AQWjVb5q3aE0E9_Qrs",
+    authDomain: "mad-fighter-dcfea.firebaseapp.com",
+    // ⚠️ VERIFY THIS: open Firebase console → Realtime Database → the URL shown
+    // at the top of the data view must match exactly (region can vary).
+    databaseURL: "https://mad-fighter-dcfea-default-rtdb.firebaseio.com",
+    projectId: "mad-fighter-dcfea",
+    storageBucket: "mad-fighter-dcfea.firebasestorage.app",
+    messagingSenderId: "65120349308",
+    appId: "1:65120349308:web:d8b8e39fa47f4e538d6df9"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
+</head>
+<body>
+
+<!-- HOME SCREEN -->
+<div id="home-screen" class="screen active">
+  <div class="fire-bg"></div>
+  <div class="logo-container">
+    <div class="logo-mad flicker">MAD</div>
+    <div class="logo-fighter">ROBOTICS FIGHT</div>
+    <div class="ca-box" id="ca-box" onclick="copyCA()">CA: <span id="ca-text">Fa7ZE9nCEYnrHsnoeHuhEExJpchtrBtKXnWe6CgHpump</span> <span id="ca-copy-icon">📋</span></div>
+    <div class="coded-by">CODED BY HARF</div>
+    <div class="dedicated-to">$MAD COMMUNITY</div>
+  </div>
+  <button class="menu-btn" onclick="goToCharSelect('local')">⚔️ LOCAL BATTLE</button>
+  <button class="menu-btn" onclick="showScreen('signup-screen')">🌐 ONLINE BATTLE</button>
+  <div id="music-toggle-btn" onclick="toggleMusic()" style="margin-top:14px;cursor:pointer;display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.5);border:1px solid #444;border-radius:20px;padding:8px 18px;transition:all 0.2s;user-select:none;">
+    <span id="music-icon" style="font-size:18px;">🔊</span>
+    <span id="music-label" style="font-size:11px;letter-spacing:2px;color:#aaa;">MUSIC: ON</span>
+  </div>
+</div>
+
+<!-- SIGNUP SCREEN -->
+<div id="signup-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="online-box" style="border-color:#f39c12;">
+    <div style="font-size:28px;margin-bottom:4px;">🔥</div>
+    <div class="online-title" style="color:var(--gold);">CREATE ACCOUNT</div>
+    <div style="font-size:10px;color:#777;letter-spacing:1px;margin-bottom:14px;">JOIN THE $MAD ROBOTICS FIGHT COMMUNITY</div>
+    <input class="online-input" id="signup-username" type="text" placeholder="Choose a Username" maxlength="20" autocomplete="off">
+    <input class="online-input" id="signup-password" type="password" placeholder="Choose a Password" maxlength="30">
+    <input class="online-input" id="signup-password2" type="password" placeholder="Confirm Password" maxlength="30">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:12px 0 5px;padding:12px;font-size:14px;" onclick="doSignup()">⚡ CREATE ACCOUNT</button>
+    <div class="online-status" id="signup-status"></div>
+    <div style="margin-top:12px;font-size:11px;color:#666;letter-spacing:1px;">ALREADY HAVE AN ACCOUNT?</div>
+    <button style="background:none;border:none;color:var(--cyan);font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:4px;padding:4px;" onclick="showScreen('login-screen')">→ LOG IN</button>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="online-box" style="border-color:var(--cyan);">
+    <div style="font-size:28px;margin-bottom:4px;">⚔️</div>
+    <div class="online-title">LOG IN</div>
+    <div style="font-size:10px;color:#777;letter-spacing:1px;margin-bottom:14px;">WELCOME BACK, FIGHTER</div>
+    <input class="online-input" id="login-username" type="text" placeholder="Username" maxlength="20" autocomplete="off">
+    <input class="online-input" id="login-password" type="password" placeholder="Password" maxlength="30">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:12px 0 5px;padding:12px;font-size:14px;" onclick="doLogin()">⚔️ ENTER THE ARENA</button>
+    <div class="online-status" id="login-status"></div>
+    <div style="margin-top:12px;font-size:11px;color:#666;letter-spacing:1px;">NEW FIGHTER?</div>
+    <button style="background:none;border:none;color:var(--gold);font-size:12px;letter-spacing:2px;cursor:pointer;margin-top:4px;padding:4px;" onclick="showScreen('signup-screen')">→ CREATE ACCOUNT</button>
+  </div>
+</div>
+
+<!-- LOBBY SCREEN -->
+<div id="lobby-screen" class="screen" style="background:radial-gradient(ellipse at center,#001a1a 0%,#000 80%);overflow-y:auto;justify-content:flex-start;padding-top:50px;">
+  <button class="back-btn" onclick="logoutUser()">← LOGOUT</button>
+  <div style="text-align:center;margin-bottom:12px;width:100%;">
+    <div style="font-size:10px;color:#555;letter-spacing:2px;">LOGGED IN AS</div>
+    <div id="lobby-username-display" style="font-size:20px;font-weight:900;color:var(--gold);letter-spacing:3px;"></div>
+    <div id="lobby-record" style="font-size:10px;color:#888;letter-spacing:2px;margin-top:2px;"></div>
+  </div>
+  <div class="online-box" style="border-color:var(--blood-red);margin-bottom:14px;width:90%;max-width:400px;">
+    <div class="online-title" style="color:var(--blood-red);font-size:16px;">⚔️ CHALLENGE A FIGHTER</div>
+    <input class="online-input" id="challenge-target" type="text" placeholder="Enter opponent username" maxlength="20" autocomplete="off">
+    <button class="menu-btn" style="min-width:unset;width:100%;margin:10px 0 0;padding:10px;font-size:13px;" onclick="sendChallenge()">🥊 SEND CHALLENGE</button>
+    <div class="online-status" id="challenge-status" style="margin-top:8px;"></div>
+  </div>
+  <div class="online-box" style="border-color:var(--green);width:90%;max-width:400px;margin-bottom:14px;">
+    <div class="online-title" style="color:var(--green);font-size:15px;">📨 INCOMING CHALLENGES</div>
+    <div id="incoming-challenges" style="min-height:40px;font-size:12px;color:#777;letter-spacing:1px;text-align:center;margin-top:8px;">NO CHALLENGES YET</div>
+  </div>
+  <div class="online-box" style="border-color:#444;width:90%;max-width:400px;margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div class="online-title" style="color:#aaa;font-size:14px;margin:0;">🟢 ONLINE PLAYERS</div>
+      <button onclick="refreshLobby()" style="background:none;border:1px solid #333;color:#777;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;letter-spacing:1px;">REFRESH</button>
+    </div>
+    <div id="online-players-list" style="font-size:12px;color:#777;letter-spacing:1px;text-align:center;">LOADING...</div>
+  </div>
+</div>
+
+<!-- CHARACTER SELECT -->
+<div id="char-select" class="screen">
+  <button class="back-btn" onclick="showScreen('home-screen')">← BACK</button>
+  <div class="select-title">SELECT FIGHTER</div>
+  <div class="select-instructions" id="select-instructions">
+    <span class="p1-turn">PLAYER 1 — CHOOSE YOUR FIGHTER</span>
+  </div>
+  <div class="selected-display">
+    <div class="sel-box p1" id="p1-sel-box">
+      <div class="sel-label p1">P1</div>
+      <div class="sel-name" id="p1-sel-name">???</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:20px;color:#c0392b;font-weight:900;">VS</div>
+    <div class="sel-box p2" id="p2-sel-box">
+      <div class="sel-label p2">P2</div>
+      <div class="sel-name" id="p2-sel-name">???</div>
+    </div>
+  </div>
+  <div class="fighter-grid" id="fighter-grid"></div>
+  <button class="menu-btn" id="fight-btn" style="display:none; margin-top:10px;" onclick="startFight()">⚔️ FIGHT!</button>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="game-arena" id="game-arena">
+    <div class="arena-bg"></div>
+    <div class="arena-floor"></div>
+    <div class="skull-decoration" style="left:5%;">💀</div>
+    <div class="skull-decoration" style="right:5%;">💀</div>
+    <div class="flash" id="screen-flash"></div>
+    <div class="hud">
+      <div class="health-section p1-health-section">
+        <div class="fighter-label" id="p1-hud-name">P1</div>
+        <div class="health-bar-outer"><div class="health-bar-inner" id="p1-health-bar" style="width:100%"></div></div>
+      </div>
+      <div class="timer-box"><div class="timer-num" id="timer-display">99</div></div>
+      <div class="health-section p2-health-section">
+        <div class="fighter-label" id="p2-hud-name">P2</div>
+        <div class="health-bar-outer"><div class="health-bar-inner" id="p2-health-bar" style="width:100%; margin-left:auto;"></div></div>
+      </div>
+    </div>
+    <div class="round-display" id="round-display">ROUND 1</div>
+    <div id="game-music-btn" onclick="toggleMusic()" style="position:absolute;top:5px;right:5px;z-index:200;cursor:pointer;background:rgba(0,0,0,0.6);border:1px solid #333;border-radius:14px;padding:3px 8px;font-size:12px;user-select:none;">🔊</div>
+    <div class="fighter-sprite" id="p1-sprite"></div>
+    <div class="fighter-sprite" id="p2-sprite"></div>
+    <div class="announcer" id="announcer"></div>
+    <div class="power-bars">
+      <div class="power-bar-container">
+        <div class="power-label" id="p1-power-label">POWER</div>
+        <div class="power-bar-outer"><div class="power-bar-inner" id="p1-power-bar" style="width:0%"></div></div>
+      </div>
+      <div class="power-bar-container p2-power-container" style="text-align:right;">
+        <div class="power-label" id="p2-power-label">POWER</div>
+        <div class="power-bar-outer"><div class="power-bar-inner" id="p2-power-bar" style="width:0%"></div></div>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="dpad">
+        <div></div>
+        <div class="dpad-btn" id="btn-up" ontouchstart="pressBtn('up',true)" ontouchend="pressBtn('up',false)" onmousedown="pressBtn('up',true)" onmouseup="pressBtn('up',false)">▲</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-left" ontouchstart="pressBtn('left',true)" ontouchend="pressBtn('left',false)" onmousedown="pressBtn('left',true)" onmouseup="pressBtn('left',false)">◀</div>
+        <div class="dpad-btn dpad-center">+</div>
+        <div class="dpad-btn" id="btn-right" ontouchstart="pressBtn('right',true)" ontouchend="pressBtn('right',false)" onmousedown="pressBtn('right',true)" onmouseup="pressBtn('right',false)">▶</div>
+        <div></div>
+        <div class="dpad-btn" id="btn-down" ontouchstart="pressBtn('down',true)" ontouchend="pressBtn('down',false)" onmousedown="pressBtn('down',true)" onmouseup="pressBtn('down',false)">▼</div>
+        <div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+        <div class="fatality-btn" ontouchstart="useSpecial()" onmousedown="useSpecial()">⚡ SPECIAL</div>
+        <div id="special-ready-text" style="font-size:9px;color:#555;letter-spacing:1px;">FILL POWER BAR</div>
+      </div>
+      <div class="action-btns">
+        <div class="action-btn btn-punch" ontouchstart="doAction('punch')" onmousedown="doAction('punch')">MAD<br>PUNCH</div>
+        <div class="action-btn btn-kick" ontouchstart="doAction('kick')" onmousedown="doAction('kick')">KICK</div>
+        <div class="action-btn btn-block" ontouchstart="doAction('block')" onmousedown="doAction('block')">BLOCK</div>
+        <div class="action-btn btn-special" ontouchstart="doAction('combo')" onmousedown="doAction('combo')">COMBO</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN SCREEN -->
+<div id="win-screen" class="screen">
+  <div class="win-title" id="win-title">WINNER!</div>
+  <div class="winner-name" id="winner-name"></div>
+  <div class="wins-text" id="round-wins-text"></div>
+  <button class="menu-btn" onclick="goToCharSelect('local')">REMATCH</button>
+  <button class="menu-btn" style="background:linear-gradient(135deg,#1a1a2e,#16213e);color:#aaa;" onclick="showScreen('home-screen')">MAIN MENU</button>
+</div>
+
+<script>
+// ============================================================
+// SOUND ENGINE (defined first so functions are available everywhere)
+// ============================================================
+let audioCtx = null;
+let musicOn = true;
+let musicPlaying = false;
+let bgmGain = null;
+let bgmTimeout = null;
+let ambientPlaying = false;
+let ambientGain = null;
+let ambientTimeout = null;
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playSound(type) {
+  if (!musicOn) return;
+  try {
+    const ctx = getAudio();
+    const now = ctx.currentTime;
+    if (type === 'punch') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.7, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 400;
+      src.connect(f); f.connect(g); g.connect(ctx.destination); src.start(now);
+    } else if (type === 'kick') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(180, now); o.frequency.exponentialRampToValueAtTime(40, now + 0.18);
+      g.gain.setValueAtTime(0.9, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.22);
+    } else if (type === 'block') {
+      [200, 400, 600].forEach((freq, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'square'; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.15, now + i * 0.01); g.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+        o.connect(g); g.connect(ctx.destination); o.start(now + i * 0.01); o.stop(now + 0.2);
+      });
+    } else if (type === 'special') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(200, now); f.frequency.exponentialRampToValueAtTime(2000, now + 0.5);
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(80, now); o.frequency.exponentialRampToValueAtTime(400, now + 0.5);
+      g.gain.setValueAtTime(0.8, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+      o.connect(f); f.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.6);
+    } else if (type === 'mad') {
+      [0, 0.07, 0.15].forEach((t, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        const freqs = [300, 200, 100];
+        o.frequency.setValueAtTime(freqs[i], now + t); o.frequency.exponentialRampToValueAtTime(freqs[i] * 0.3, now + t + 0.3);
+        g.gain.setValueAtTime(0.7, now + t); g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.35);
+        o.connect(g); g.connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.4);
+      });
+    } else if (type === 'fight') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sawtooth'; o.frequency.setValueAtTime(150, now); o.frequency.exponentialRampToValueAtTime(600, now + 0.08); o.frequency.exponentialRampToValueAtTime(200, now + 0.3);
+      g.gain.setValueAtTime(0.8, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.45);
+    } else if (type === 'combo') {
+      [0, 0.08, 0.16].forEach((t, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.frequency.value = 300 + i * 80;
+        g.gain.setValueAtTime(0.5, now + t); g.gain.exponentialRampToValueAtTime(0.001, now + t + 0.1);
+        o.connect(g); g.connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.12);
+      });
+    } else if (type === 'jump') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(200, now); o.frequency.exponentialRampToValueAtTime(800, now + 0.2);
+      g.gain.setValueAtTime(0.3, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.28);
+    } else if (type === 'win') {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'square'; o.frequency.value = freq;
+        const t = now + i * 0.12;
+        g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+        o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + 0.28);
+      });
+    } else if (type === 'menu') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(600, now); o.frequency.exponentialRampToValueAtTime(800, now + 0.06);
+      g.gain.setValueAtTime(0.2, now); g.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+      o.connect(g); g.connect(ctx.destination); o.start(now); o.stop(now + 0.1);
+    }
+  } catch(e) {}
+}
+
+function playDrum(ctx, dest, time, type) {
+  try {
+    if (type === 'kick') {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.frequency.setValueAtTime(150, time); o.frequency.exponentialRampToValueAtTime(30, time + 0.12);
+      g.gain.setValueAtTime(1, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+      o.connect(g); g.connect(dest); o.start(time); o.stop(time + 0.16);
+    } else if (type === 'snare') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1000;
+      g.gain.setValueAtTime(0.6, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+      src.connect(f); f.connect(g); g.connect(dest); src.start(time);
+    } else if (type === 'hihat') {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); const f = ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 8000;
+      g.gain.setValueAtTime(0.2, time); g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      src.connect(f); f.connect(g); g.connect(dest); src.start(time);
+    }
+  } catch(e) {}
+}
+
+function startBattleMusic() {
+  if (!musicOn || musicPlaying) return;
+  try {
+    const ctx = getAudio();
+    musicPlaying = true;
+    bgmGain = ctx.createGain(); bgmGain.gain.value = 0.12; bgmGain.connect(ctx.destination);
+    scheduleBGM(ctx.currentTime);
+  } catch(e) {}
+}
+
+function stopBattleMusic() {
+  musicPlaying = false;
+  if (bgmTimeout) clearTimeout(bgmTimeout);
+  if (bgmGain) {
+    try { if (audioCtx) bgmGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3); } catch(e) {}
+    setTimeout(() => { try { bgmGain.disconnect(); } catch(e) {} bgmGain = null; }, 500);
+  }
+}
+
+function scheduleBGM(startTime) {
+  if (!musicPlaying || !bgmGain) return;
+  try {
+    const ctx = getAudio(); const bpm = 140; const beat = 60 / bpm; const bar = beat * 4; const loopLen = bar * 4;
+    [0, beat * 2].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'kick'));
+    [beat, beat * 3].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'snare'));
+    for (let i = 0; i < 8; i++) playDrum(ctx, bgmGain, startTime + i * beat * 0.5, 'hihat');
+    playDrum(ctx, bgmGain, startTime + beat * 0.5, 'kick');
+    [bar, bar + beat * 2, bar + beat * 0.75].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'kick'));
+    [bar + beat, bar + beat * 3].forEach(t => playDrum(ctx, bgmGain, startTime + t, 'snare'));
+    for (let i = 0; i < 8; i++) playDrum(ctx, bgmGain, startTime + bar + i * beat * 0.5, 'hihat');
+    const bassNotes = [55, 55, 73, 73, 65, 65, 49, 49];
+    bassNotes.forEach((freq, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 300;
+      o.type = 'sawtooth'; o.frequency.value = freq;
+      const t = startTime + i * beat * 0.5;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.02);
+      g.gain.setValueAtTime(0.5, t + beat * 0.4); g.gain.linearRampToValueAtTime(0, t + beat * 0.5);
+      o.connect(f); f.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + beat * 0.52);
+    });
+    const melNotes = [220, 246, 261, 293, 329, 293, 261, 220, 246, 293, 329, 440, 392, 329, 293, 261];
+    melNotes.forEach((freq, i) => {
+      const o = ctx.createOscillator(); const g = ctx.createGain();
+      o.type = 'square'; o.frequency.value = freq;
+      const t = startTime + bar * 2 + i * beat * 0.5;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.12, t + 0.02);
+      g.gain.setValueAtTime(0.12, t + beat * 0.35); g.gain.linearRampToValueAtTime(0, t + beat * 0.5);
+      o.connect(g); g.connect(bgmGain); o.start(t); o.stop(t + beat * 0.52);
+    });
+    const remaining = (startTime + loopLen - ctx.currentTime) * 1000 - 200;
+    bgmTimeout = setTimeout(() => { if (musicPlaying && bgmGain) scheduleBGM(startTime + loopLen); }, Math.max(100, remaining));
+  } catch(e) { musicPlaying = false; }
+}
+
+function startAmbientMusic() {
+  if (!musicOn || ambientPlaying) return;
+  try {
+    const ctx = getAudio();
+    ambientPlaying = true;
+    ambientGain = ctx.createGain(); ambientGain.gain.value = 0.08; ambientGain.connect(ctx.destination);
+    scheduleAmbient(ctx.currentTime);
+  } catch(e) {}
+}
+
+function stopAmbientMusic() {
+  ambientPlaying = false;
+  if (ambientTimeout) clearTimeout(ambientTimeout);
+  if (ambientGain) {
+    try { if (audioCtx) ambientGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5); } catch(e) {}
+    setTimeout(() => { try { ambientGain.disconnect(); } catch(e) {} ambientGain = null; }, 600);
+  }
+}
+
+function scheduleAmbient(startTime) {
+  if (!ambientPlaying || !ambientGain) return;
+  try {
+    const ctx = getAudio(); const beat = 60 / 90; const loopLen = beat * 8;
+    const chords = [[110, 138, 165], [98, 123, 147], [117, 147, 175], [87, 110, 131]];
+    chords.forEach((chord, ci) => {
+      chord.forEach(freq => {
+        const o = ctx.createOscillator(); const g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        const t = startTime + ci * beat * 2;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.3, t + beat * 0.5);
+        g.gain.setValueAtTime(0.3, t + beat * 1.5); g.gain.linearRampToValueAtTime(0, t + beat * 2);
+        o.connect(g); g.connect(ambientGain); o.start(t); o.stop(t + beat * 2.1);
+      });
+    });
+    for (let i = 0; i < 2; i++) playDrum(ctx, ambientGain, startTime + i * beat * 4, 'kick');
+    const remaining = (startTime + loopLen - ctx.currentTime) * 1000 - 200;
+    ambientTimeout = setTimeout(() => { if (ambientPlaying && ambientGain) scheduleAmbient(startTime + loopLen); }, Math.max(100, remaining));
+  } catch(e) { ambientPlaying = false; }
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  const icon = document.getElementById('music-icon');
+  const label = document.getElementById('music-label');
+  const gameBtn = document.getElementById('game-music-btn');
+  if (icon) icon.textContent = musicOn ? '🔊' : '🔇';
+  if (label) label.textContent = musicOn ? 'MUSIC: ON' : 'MUSIC: OFF';
+  if (gameBtn) gameBtn.textContent = musicOn ? '🔊' : '🔇';
+  if (!musicOn) { stopBattleMusic(); stopAmbientMusic(); }
+  else {
+    const gameVisible = document.getElementById('game-screen').classList.contains('active');
+    const homeVisible = document.getElementById('home-screen').classList.contains('active');
+    if (gameVisible) startBattleMusic();
+    else if (homeVisible) startAmbientMusic();
+  }
+}
+
+// ============================================================
+// (Head art is now drawn directly in SVG inside drawAngryFace() below —
+// no embedded photo needed, which also removes the white-box clipping bug)
+// ============================================================
+
+// ============================================================
+// CHARACTER DATA
+// ============================================================
+const CHARACTERS = [
+  { id:0, name:"MAD DEV", title:"The Creator", color:"#c0392b", accent:"#e74c3c", special:"CODE BLAST", specialDesc:"Fires a devastating burst of code energy", bodyColor:"#1a1a2e", skinColor:"#d4a76a", hairColor:"#2c3e50", outfitColor:"#c0392b", glowColor:"#e74c3c", power:{attack:9,defense:7,speed:8} },
+  { id:1, name:"CRYPTOGURU", title:"The Oracle", color:"#f39c12", accent:"#f1c40f", special:"CRYPTO STORM", specialDesc:"Summons digital gold to crush enemies", bodyColor:"#2c1654", skinColor:"#c8a882", hairColor:"#7f8c8d", outfitColor:"#8e44ad", glowColor:"#f39c12", power:{attack:8,defense:8,speed:7} },
+  { id:2, name:"HARF", title:"The Engineer", color:"#27ae60", accent:"#2ecc71", special:"SYSTEM HACK", specialDesc:"Overloads opponent's neural system", bodyColor:"#1a2e1a", skinColor:"#dbb899", hairColor:"#1a1a1a", outfitColor:"#27ae60", glowColor:"#2ecc71", power:{attack:10,defense:6,speed:9} },
+  { id:3, name:"TOOSURE", title:"The Confident", color:"#3498db", accent:"#5dade2", special:"SURE SHOT", specialDesc:"Unleashes an unstoppable force of pure confidence", bodyColor:"#0d2137", skinColor:"#c89878", hairColor:"#2c3e50", outfitColor:"#3498db", glowColor:"#5dade2", power:{attack:8,defense:9,speed:8} },
+  { id:4, name:"MAD GURU", title:"The Wise", color:"#e67e22", accent:"#f0a500", special:"MADNESS WAVE", specialDesc:"Channels pure madness into a devastating wave", bodyColor:"#2e1a00", skinColor:"#b8894a", hairColor:"#6b4c11", outfitColor:"#e67e22", glowColor:"#f0a500", power:{attack:7,defense:10,speed:7} },
+  { id:5, name:"AKWAHK", title:"The Phantom", color:"#00bcd4", accent:"#00e5ff", special:"SHADOW STRIKE", specialDesc:"Vanishes and reappears for a phantom attack", bodyColor:"#001a1a", skinColor:"#a0c0c0", hairColor:"#004d4d", outfitColor:"#006064", glowColor:"#00e5ff", power:{attack:9,defense:7,speed:10} },
+  { id:6, name:"MADRICH", title:"The Wealthy", color:"#f1c40f", accent:"#ffd700", special:"GOLD RAIN", specialDesc:"Rains golden coins that obliterate enemies", bodyColor:"#1a1500", skinColor:"#d4a020", hairColor:"#8b6914", outfitColor:"#b8860b", glowColor:"#ffd700", power:{attack:8,defense:8,speed:8} },
+  { id:7, name:"WALLSTREET", title:"The Broker", color:"#2ecc71", accent:"#27ae60", special:"MARKET CRASH", specialDesc:"Triggers a brutal sell-off that liquidates the enemy", bodyColor:"#0a1f12", skinColor:"#c8966a", hairColor:"#1c1c1c", outfitColor:"#1b2a1f", glowColor:"#2ecc71", power:{attack:8,defense:8,speed:7} },
+  { id:8, name:"ABRAXAS", title:"The Ancient One", color:"#8e44ad", accent:"#c39bd3", special:"VOID SERPENT", specialDesc:"Unleashes a coiling void serpent from beyond", bodyColor:"#0d0312", skinColor:"#9b8aa8", hairColor:"#1a0a24", outfitColor:"#2c0e3e", glowColor:"#c39bd3", power:{attack:9,defense:9,speed:6} },
+  { id:9, name:"MADCAT", title:"The Feral", color:"#e67e22", accent:"#ff9f43", special:"CLAW FRENZY", specialDesc:"A relentless flurry of feral claw strikes", bodyColor:"#1f1208", skinColor:"#c98a52", hairColor:"#0f0a05", outfitColor:"#d35400", glowColor:"#ff9f43", power:{attack:10,defense:5,speed:10} },
+];
+
+// Per-character accessory worn ABOVE/AROUND the shared angry-face head
+// (keeps each fighter visually distinct even though all heads use the same art)
+function headAccessory(char) {
+  const h = char.hairColor, g = char.glowColor;
+  switch (char.id) {
+    case 0: // MAD DEV — tech earpieces + signal antenna
+      return '<rect x="18" y="17" width="5" height="9" rx="2" fill="' + h + '" opacity="0.85"/><rect x="47" y="17" width="5" height="9" rx="2" fill="' + h + '" opacity="0.85"/>' +
+             '<line x1="35" y1="6" x2="35" y2="1" stroke="' + g + '" stroke-width="2"/><circle cx="35" cy="1" r="2" fill="' + g + '"/>';
+    case 1: // CRYPTOGURU — mystic headband with gem
+      return '<path d="M20 14 Q35 5 50 14" stroke="' + h + '" stroke-width="4" fill="none"/><polygon points="35,4 38,9 32,9" fill="' + g + '"/>';
+    case 2: // HARF — tech halo ring
+      return '<ellipse cx="35" cy="4" rx="10" ry="2.5" fill="none" stroke="' + g + '" stroke-width="1.5" opacity="0.85"/>';
+    case 3: // TOOSURE — confident headscarf knot
+      return '<path d="M20 12 Q35 2 50 12 L50 17 Q35 9 20 17 Z" fill="' + h + '" opacity="0.85"/>';
+    case 4: // MAD GURU — crown of wisdom
+      return '<polygon points="22,10 26,1 31,8 35,0 39,8 44,1 48,10" fill="' + g + '"/><rect x="21" y="9" width="28" height="4" rx="1" fill="' + g + '"/>';
+    case 5: // AKWAHK — phantom hood
+      return '<path d="M18 19 Q19 2 35 2 Q51 2 52 19 Q35 9 18 19 Z" fill="' + h + '" opacity="0.92"/>';
+    case 6: // MADRICH — gold crown
+      return '<polygon points="21,11 26,1 35,7 44,1 49,11" fill="' + h + '"/><rect x="20" y="10" width="30" height="5" rx="2" fill="' + h + '"/><circle cx="35" cy="0" r="2.2" fill="#fff8dc"/>';
+    case 7: // WALLSTREET — slicked hair + tie knot at collar
+      return '<path d="M21,9 Q35,1 49,9 Q49,4 35,3 Q21,4 21,9 Z" fill="' + h + '"/><polygon points="32,30 38,30 36,40 34,40" fill="' + g + '"/>';
+    case 8: // ABRAXAS — ancient horned halo
+      return '<path d="M17,16 Q12,2 22,5 Q19,13 23,18" fill="none" stroke="' + g + '" stroke-width="2.5" stroke-linecap="round"/><path d="M53,16 Q58,2 48,5 Q51,13 47,18" fill="none" stroke="' + g + '" stroke-width="2.5" stroke-linecap="round"/><ellipse cx="35" cy="4" rx="13" ry="2" fill="none" stroke="' + g + '" stroke-width="1" opacity="0.6"/>';
+    case 9: // MADCAT — feral cat ears
+      return '<polygon points="18,12 23,-2 29,11" fill="' + h + '"/><polygon points="20,9 23,1 26,9" fill="#3a2a1a"/><polygon points="52,12 47,-2 41,11" fill="' + h + '"/><polygon points="50,9 47,1 44,9" fill="#3a2a1a"/><path d="M20,24 L14,22 M20,26 L14,27 M50,24 L56,22 M50,26 L56,27" stroke="#fff" stroke-width="0.8" opacity="0.7"/>';
+    default: return '';
+  }
+}
+
+// Per-character body accessory (cloak/cape/aura) layered onto the humanoid torso
+function bodyAccessory(char) {
+  const o = char.outfitColor, g = char.glowColor, h = char.hairColor;
+  switch (char.id) {
+    case 1: return '<polygon points="35,45 22,102 48,102" fill="' + o + '" opacity="0.55"/>'; // flowing cloak
+    case 2: return '<rect x="29" y="55" width="12" height="7" rx="1" fill="' + g + '" opacity="0.5"/>'; // chest panel
+    case 3: return '<path d="M19,38 Q8,72 14,102 L20,102 L24,62 L34,62 L38,102 L46,102 Q52,72 41,38 Z" fill="' + o + '" opacity="0.4"/>'; // coat tails
+    case 5: return '<ellipse cx="35" cy="76" rx="22" ry="10" fill="' + g + '" opacity="0.12"/>'; // shadow aura
+    case 6: return '<path d="M22 40 Q35 44 48 40" stroke="' + g + '" stroke-width="2" fill="none" opacity="0.8"/>'; // gold trim
+    case 7: return '<rect x="32" y="40" width="6" height="46" fill="#0a0a0a" opacity="0.7"/><path d="M21,42 L35,52 L49,42 L49,46 L35,56 L21,46 Z" fill="#0d0d0d" opacity="0.8"/>'; // necktie + open jacket
+    case 8: return '<path d="M18,45 Q10,65 16,90 Q12,70 20,50 Z" fill="' + o + '" opacity="0.6"/><path d="M52,45 Q60,65 54,90 Q58,70 50,50 Z" fill="' + o + '" opacity="0.6"/><circle cx="35" cy="62" r="10" fill="none" stroke="' + g + '" stroke-width="1" opacity="0.5"/>'; // tattered robe wisps + arcane ring
+    case 9: return '<path d="M46,88 Q54,96 50,106" stroke="' + h + '" stroke-width="4" fill="none" stroke-linecap="round"/>'; // tail
+    default: return '';
+  }
+}
+
+// (limb-segment geometry is now built directly inside drawFighter's rotatable
+// joint groups, so each segment can be independently animated per action)
+
+// Draws the shared angry-face head entirely in SVG (no embedded photo), so there's
+// no white background bleeding through and every fighter reads as fully drawn/cohesive.
+function drawAngryFace(s, g) {
+  // s = skin tone (kept for nose continuity), g = character glow/accent color (used for the glowing rage eyes)
+  // Face itself is rendered in a furious emoji-red rather than the natural skin tone.
+  const faceRed = '#e8412e', faceDark = '#b8281a', faceShadow = 'rgba(60,5,0,0.32)';
+  return '<circle cx="35" cy="20" r="15" fill="' + faceRed + '"/>' +
+    // deep cheek/jaw hollow shading for a gaunt, snarling look
+    '<path d="M20,18 Q19,26 24,32 Q27,33.5 27,30" fill="' + faceShadow + '"/>' +
+    '<path d="M50,18 Q51,26 46,32 Q43,33.5 43,30" fill="' + faceShadow + '"/>' +
+    // heavy furrowed angry brows — thick dark wedges slammed down toward the nose
+    '<path d="M21,13 L32,17.5 L30,20.5 L20,17.5 Z" fill="#1a0d03"/>' +
+    '<path d="M49,13 L38,17.5 L40,20.5 L50,17.5 Z" fill="#1a0d03"/>' +
+    // eyes — narrow blazing slits with a glowing rage core
+    '<path d="M23,20.5 Q27.5,18.2 32,20.5 Q27.5,22.3 23,20.5 Z" fill="#0d0d0d"/>' +
+    '<path d="M38,20.5 Q42.5,18.2 47,20.5 Q42.5,22.3 38,20.5 Z" fill="#0d0d0d"/>' +
+    '<ellipse cx="27.5" cy="20.4" rx="2.4" ry="1.1" fill="' + g + '"/>' +
+    '<ellipse cx="42.5" cy="20.4" rx="2.4" ry="1.1" fill="' + g + '"/>' +
+    '<circle cx="26.5" cy="19.8" r="0.6" fill="#fff" opacity="0.9"/>' +
+    '<circle cx="41.5" cy="19.8" r="0.6" fill="#fff" opacity="0.9"/>' +
+    // nose, flared with shadow
+    '<path d="M35,21 L33,27 Q35,29 37,27 Z" fill="' + faceDark + '" stroke="rgba(0,0,0,0.3)" stroke-width="0.5"/>' +
+    // snarling open mouth, clenched bared teeth top + bottom
+    '<path d="M25,29.5 Q35,36.5 45,29.5 Q35,34.5 25,29.5 Z" fill="#3d0a0a"/>' +
+    '<path d="M27,29.8 L43,29.8 L41.5,32 L28.5,32 Z" fill="#fff" opacity="0.95"/>' +
+    '<path d="M28,33 L42,33 L40.5,35 L29.5,35 Z" fill="#f0e6d8" opacity="0.85"/>' +
+    // deep nasolabial snarl creases
+    '<path d="M22,24 Q21,29 25,33" stroke="' + faceShadow + '" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+    '<path d="M48,24 Q49,29 45,33" stroke="' + faceShadow + '" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+    // bulging anger vein on forehead, pulsing with character glow color
+    '<path d="M32,11 L33,7 L34.5,10 L35.5,6.5 L37,10 L38,7.5" stroke="' + g + '" stroke-width="1.1" fill="none" opacity="0.9" stroke-linecap="round"/>';
+}
+
+function drawFighter(char) {
+  const c = char.bodyColor, s = char.skinColor, o = char.outfitColor, h = char.hairColor, g = char.glowColor;
+  return '<svg viewBox="0 0 70 140" xmlns="http://www.w3.org/2000/svg" class="fighter-svg" style="filter: drop-shadow(0 0 8px ' + g + ')">' +
+    '<ellipse cx="35" cy="135" rx="18" ry="4" fill="rgba(0,0,0,0.5)"/>' +
+
+    // BACK LEG (drawn first so it sits behind the torso) — hip group containing a knee sub-group
+    '<g class="limb-hip limb-back-leg">' +
+      '<ellipse cx="0" cy="0" rx="9" ry="8" fill="' + o + '" transform="translate(44,90)"/>' +
+      '<g transform="translate(44,90)"><ellipse cx="0" cy="14" rx="9" ry="13" fill="' + o + '"/>' +
+        '<g class="limb-knee">' +
+          '<ellipse cx="0" cy="27" rx="6.5" ry="6" fill="' + s + '"/>' +
+          '<ellipse cx="2" cy="42" rx="6.5" ry="12.5" fill="' + s + '"/>' +
+          '<ellipse cx="-1" cy="38" rx="2.5" ry="9" fill="#fff" opacity="0.1"/>' +
+          '<path d="M0,32 Q2,40 1,50" stroke="rgba(150,30,40,0.4)" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+          '<ellipse cx="3" cy="55" rx="8.5" ry="5" fill="' + h + '"/>' +
+        '</g>' +
+      '</g>' +
+    '</g>' +
+
+    // FRONT LEG
+    '<g class="limb-hip limb-front-leg">' +
+      '<ellipse cx="0" cy="0" rx="9" ry="8" fill="' + o + '" transform="translate(26,90)"/>' +
+      '<g transform="translate(26,90)"><ellipse cx="0" cy="14" rx="9" ry="13" fill="' + o + '"/>' +
+        '<g class="limb-knee">' +
+          '<ellipse cx="0" cy="27" rx="6.5" ry="6" fill="' + s + '"/>' +
+          '<ellipse cx="-2" cy="42" rx="6.5" ry="12.5" fill="' + s + '"/>' +
+          '<ellipse cx="1" cy="38" rx="2.5" ry="9" fill="#fff" opacity="0.1"/>' +
+          '<path d="M0,32 Q-2,40 -1,50" stroke="rgba(150,30,40,0.4)" stroke-width="1" fill="none" stroke-linecap="round"/>' +
+          '<ellipse cx="-3" cy="55" rx="8.5" ry="5" fill="' + h + '"/>' +
+        '</g>' +
+      '</g>' +
+    '</g>' +
+
+    // torso — curved trapezoid (broad shoulders, narrow waist) with a visible neck joining the head
+    '<g class="torso-group">' +
+    '<rect x="30" y="33" width="10" height="9" rx="3" fill="#e8412e"/>' +
+    '<path d="M19,42 Q35,32 51,42 Q50,52 47,62 L23,62 Q20,52 19,42 Z" fill="' + o + '"/>' +
+    '<path d="M19,42 Q35,32 51,42 Q50,66 46,90 Q35,97 24,90 Q20,66 19,42 Z" fill="' + o + '"/>' +
+    '<path d="M19,42 Q35,32 51,42 Q50,50 49,58 Q35,51 21,58 Q20,50 19,42 Z" fill="' + c + '" opacity="0.35"/>' +
+    '<path d="M24,44 Q35,40 46,44" stroke="rgba(0,0,0,0.2)" stroke-width="1.2" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="29" cy="52" rx="4" ry="6" fill="#fff" opacity="0.06"/>' +
+    '<circle cx="35" cy="64" r="7" fill="' + g + '" opacity="0.3" class="heartbeat-pulse"/>' +
+    '<text x="35" y="68" text-anchor="middle" font-size="8" fill="' + g + '" font-weight="bold" opacity="0.9">$M</text>' +
+    '<rect x="20" y="86" width="30" height="6" rx="2" fill="' + h + '" opacity="0.85"/>' +
+    bodyAccessory(char) +
+    '</g>' +
+
+    // BACK ARM — shoulder group containing an elbow sub-group, real hand with fingers
+    '<g class="limb-shoulder limb-back-arm">' +
+      '<g transform="translate(50,43)">' +
+        '<ellipse cx="0" cy="0" rx="8" ry="7" fill="' + o + '"/>' +
+        '<ellipse cx="5.5" cy="10.5" rx="7.5" ry="13" fill="' + o + '" transform="rotate(8)"/>' +
+        '<g class="limb-elbow" transform="translate(11,21)">' +
+          '<ellipse cx="0" cy="0" rx="5.5" ry="5" fill="' + s + '"/>' +
+          '<ellipse cx="1" cy="12" rx="5.5" ry="13" fill="' + s + '"/>' +
+          '<ellipse cx="1" cy="25" rx="6.5" ry="6" fill="' + s + '"/>' +
+          '<path d="M-3.5,27 q2,3 0,5 M-0.5,29 q1.5,3.5 -0.5,5 M4.5,29 q-1,3.5 1,5" stroke="' + s + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+        '</g>' +
+      '</g>' +
+    '</g>' +
+
+    // FRONT ARM
+    '<g class="limb-shoulder limb-front-arm">' +
+      '<g transform="translate(20,43)">' +
+        '<ellipse cx="0" cy="0" rx="8" ry="7" fill="' + o + '"/>' +
+        '<ellipse cx="-5.5" cy="10.5" rx="7.5" ry="13" fill="' + o + '" transform="rotate(-8)"/>' +
+        '<g class="limb-elbow" transform="translate(-11,21)">' +
+          '<ellipse cx="0" cy="0" rx="5.5" ry="5" fill="' + s + '"/>' +
+          '<ellipse cx="-1" cy="12" rx="5.5" ry="13" fill="' + s + '"/>' +
+          '<ellipse cx="-1" cy="25" rx="6.5" ry="6" fill="' + s + '"/>' +
+          '<path d="M3.5,27 q-2,3 0,5 M0.5,29 q-1.5,3.5 0.5,5 M-4.5,29 q1,3.5 -1,5" stroke="' + s + '" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+        '</g>' +
+      '</g>' +
+    '</g>' +
+
+    // head — fully drawn angry face, no embedded photo
+    '<g class="head-group">' +
+    '<circle cx="35" cy="20" r="16.5" fill="' + g + '" opacity="0.25"/>' +
+    drawAngryFace(s, g) +
+    '<circle cx="35" cy="20" r="15" fill="none" stroke="' + g + '" stroke-width="2"/>' +
+    headAccessory(char) +
+    '</g>' +
+    '<ellipse cx="35" cy="70" rx="33" ry="70" fill="' + g + '" opacity="0.04"/>' +
+    '</svg>';
+}
+
+// ============================================================
+// CONTRACT ADDRESS COPY
+// ============================================================
+function copyCA() {
+  const text = document.getElementById('ca-text').textContent.trim();
+  const box = document.getElementById('ca-box');
+  const icon = document.getElementById('ca-copy-icon');
+  const finish = (ok) => {
+    if (!icon) return;
+    icon.textContent = ok ? '✅' : '📋';
+    if (ok && box) box.classList.add('copied');
+    setTimeout(() => { icon.textContent = '📋'; if (box) box.classList.remove('copied'); }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => finish(true)).catch(() => fallbackCopy(text, finish));
+  } else {
+    fallbackCopy(text, finish);
+  }
+}
+function fallbackCopy(text, cb) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    cb(ok);
+  } catch (e) { cb(false); }
+}
+
+// ============================================================
+// GAME STATE
+// ============================================================
+let gameMode = 'local';
+let isOnlineMatch = false;
+let onlineRole = null;    // 'challenger' (sender=P1) or 'acceptor' (receiver=P2)
+let onlineOpponent = null;
+let p1Char = null, p2Char = null;
+let selectStep = 0;
+let gameState = {
+  p1HP: 100, p2HP: 100, p1Power: 0, p2Power: 0,
+  p1Blocking: false, p2Blocking: false,
+  round: 1, p1Wins: 0, p2Wins: 0,
+  timeLeft: 99, gameRunning: false,
+  timerInterval: null, aiInterval: null, moveInterval: null,
+  p1X: 18, p2X: 82,
+};
+let pressedKeys = {};
+
+// ============================================================
+// SCREEN NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // Only touch audio if AudioContext is already running (requires prior user gesture)
+  if (!audioCtx) return;
+  try {
+    if (id === 'home-screen') { stopBattleMusic(); setTimeout(startAmbientMusic, 200); }
+    else if (id === 'game-screen') { stopAmbientMusic(); }
+    else { stopAmbientMusic(); stopBattleMusic(); }
+  } catch(e) {}
+}
+
+function goToCharSelect(mode, online) {
+  if (audioCtx) { try { playSound('menu'); stopBattleMusic(); stopAmbientMusic(); } catch(e) {} }
+  gameMode = mode;
+  isOnlineMatch = !!online;
+  selectStep = 0; p1Char = null; p2Char = null;
+  document.getElementById('p1-sel-name').textContent = '???';
+  document.getElementById('p2-sel-name').textContent = '???';
+  document.getElementById('fight-btn').style.display = 'none';
+  document.getElementById('select-instructions').innerHTML = '<span class="p1-turn">PLAYER 1 — CHOOSE YOUR FIGHTER</span>';
+  renderCharGrid();
+  showScreen('char-select');
+}
+
+// ============================================================
+// CHARACTER SELECT
+// ============================================================
+function renderCharGrid() {
+  const grid = document.getElementById('fighter-grid');
+  grid.innerHTML = '';
+  CHARACTERS.forEach((char, i) => {
+    const div = document.createElement('div');
+    div.className = 'fighter-card';
+    div.id = 'card-' + i;
+    if (p1Char && p1Char.id === i) div.classList.add('selected');
+    if (p2Char && p2Char.id === i) div.classList.add('p2-selected');
+    div.innerHTML = '<div class="fighter-avatar">' + drawFighter(char) + '</div><div class="fighter-name" style="color:' + char.color + '">' + char.name + '</div><div class="fighter-power-badge">⚡ ' + char.special + '</div>';
+    div.addEventListener('click', () => selectChar(i));
+    div.addEventListener('touchstart', (e) => { e.preventDefault(); selectChar(i); }, { passive: false });
+    grid.appendChild(div);
+  });
+}
+
+function selectChar(i) {
+  if (selectStep === 0) {
+    p1Char = CHARACTERS[i];
+    document.getElementById('p1-sel-name').textContent = p1Char.name;
+    document.getElementById('p1-sel-name').style.color = p1Char.color;
+    selectStep = 1;
+    document.getElementById('select-instructions').innerHTML = '<span class="p2-turn">PLAYER 2 — CHOOSE YOUR FIGHTER</span>';
+    renderCharGrid();
+  } else if (selectStep === 1) {
+    p2Char = CHARACTERS[i];
+    document.getElementById('p2-sel-name').textContent = p2Char.name;
+    document.getElementById('p2-sel-name').style.color = p2Char.color;
+    document.getElementById('fight-btn').style.display = 'block';
+    document.getElementById('select-instructions').innerHTML = '<span style="color:#27ae60">✓ READY TO FIGHT!</span>';
+    renderCharGrid();
+  }
+}
+
+// ============================================================
+// FIGHT
+// ============================================================
+function startFight() {
+  if (!p1Char || !p2Char) return;
+  resetRound();
+  resetFighterPositions();
+  showScreen('game-screen');
+  document.getElementById('p1-hud-name').textContent = p1Char.name;
+  document.getElementById('p2-hud-name').textContent = p2Char.name;
+  document.getElementById('round-display').textContent = 'ROUND ' + gameState.round;
+  document.getElementById('p1-sprite').innerHTML = drawFighter(p1Char);
+  document.getElementById('p2-sprite').innerHTML = drawFighter(p2Char);
+  document.getElementById('p1-sprite').classList.add('idle');
+  document.getElementById('p2-sprite').classList.add('idle');
+  showAnnouncer('FIGHT!', 'fight', 1500);
+  playSound('fight');
+  setTimeout(() => {
+    startBattleMusic();
+    gameState.gameRunning = true;
+    startTimer();
+    startMovementLoop();
+    if (gameMode === 'ai') startAI();
+  }, 1500);
+}
+
+function resetRound() {
+  clearInterval(gameState.timerInterval);
+  clearInterval(gameState.aiInterval);
+  stopMovementLoop();
+  gameState.p1HP = 100; gameState.p2HP = 100;
+  gameState.p1Power = 0; gameState.p2Power = 0;
+  gameState.p1Blocking = false; gameState.p2Blocking = false;
+  gameState.timeLeft = 99; gameState.gameRunning = false;
+  updateHealthBars(); updatePowerBars();
+  document.getElementById('timer-display').textContent = '99';
+  document.getElementById('special-ready-text').textContent = 'FILL POWER BAR';
+  document.getElementById('special-ready-text').style.color = '#555';
+}
+
+function startTimer() {
+  gameState.timerInterval = setInterval(() => {
+    if (!gameState.gameRunning) return;
+    gameState.timeLeft--;
+    document.getElementById('timer-display').textContent = gameState.timeLeft;
+    if (gameState.timeLeft <= 10) document.getElementById('timer-display').style.color = '#e74c3c';
+    else document.getElementById('timer-display').style.color = '#f39c12';
+    if (gameState.timeLeft <= 0) timeUp();
+  }, 1000);
+}
+
+// ============================================================
+// MOVEMENT — lets both fighters walk in and get right up close
+// (Mortal-Kombat-style closing distance) instead of staying pinned
+// at fixed spots on opposite sides of the arena.
+// ============================================================
+const MOVE_SPEED = 0.55;   // % of arena width per tick
+const MIN_GAP = 9;         // closest the two fighters are allowed to get (melee range)
+const MIN_X = 4, MAX_X = 96;
+
+function applyFighterPositions() {
+  const p1 = document.getElementById('p1-sprite');
+  const p2 = document.getElementById('p2-sprite');
+  if (p1) { p1.style.left = gameState.p1X + '%'; p1.style.right = 'auto'; }
+  if (p2) { p2.style.left = gameState.p2X + '%'; p2.style.right = 'auto'; }
+}
+
+function startMovementLoop() {
+  clearInterval(gameState.moveInterval);
+  gameState.moveInterval = setInterval(() => {
+    if (!gameState.gameRunning) return;
+
+    // Player 1 — driven by the d-pad left/right buttons (or arrow keys)
+    let p1X = gameState.p1X;
+    if (pressedKeys.left) p1X -= MOVE_SPEED;
+    if (pressedKeys.right) p1X += MOVE_SPEED;
+
+    // Player 2 — simple AI that closes the gap, with small idle drift so it doesn't feel robotic
+    let p2X = gameState.p2X;
+    const dist = p2X - p1X;
+    let p2Moving = false;
+    if (dist > MIN_GAP + 3) { p2X -= MOVE_SPEED * 0.85; p2Moving = true; }
+    else if (dist < MIN_GAP - 2) { p2X += MOVE_SPEED * 0.5; p2Moving = true; }
+    else p2X += (Math.random() - 0.5) * MOVE_SPEED * 0.3;
+    setWalking('p2', p2Moving);
+
+    // Clamp to arena bounds, then enforce the minimum melee gap between them
+    p1X = Math.max(MIN_X, Math.min(MAX_X, p1X));
+    p2X = Math.max(MIN_X, Math.min(MAX_X, p2X));
+    if (p2X - p1X < MIN_GAP) {
+      const mid = (p1X + p2X) / 2;
+      p1X = mid - MIN_GAP / 2;
+      p2X = mid + MIN_GAP / 2;
+    }
+
+    gameState.p1X = p1X;
+    gameState.p2X = p2X;
+    applyFighterPositions();
+  }, 30);
+}
+
+function stopMovementLoop() {
+  clearInterval(gameState.moveInterval);
+}
+
+function resetFighterPositions() {
+  gameState.p1X = 18;
+  gameState.p2X = 82;
+  applyFighterPositions();
+}
+
+
+let lastAction = 0;
+const ACTION_COOLDOWN = 300;
+
+function doAction(type) {
+  if (!gameState.gameRunning) return;
+  const now = Date.now();
+  if (now - lastAction < ACTION_COOLDOWN) return;
+  lastAction = now;
+
+  if (type === 'block') {
+    playSound('block');
+    gameState.p1Blocking = true;
+    animateFighter('p1', 'block');
+    setTimeout(() => { gameState.p1Blocking = false; }, 600);
+    return;
+  }
+
+  let damage = 0, hitText = '', powerGain = 0;
+  if (type === 'punch') {
+    playSound('punch');
+    damage = 8 + Math.floor(Math.random() * 7);
+    hitText = getHitText('punch'); powerGain = 12;
+    animateFighter('p1', 'punch');
+  } else if (type === 'kick') {
+    playSound('kick');
+    damage = 11 + Math.floor(Math.random() * 9);
+    hitText = getHitText('kick'); powerGain = 15;
+    animateFighter('p1', 'kick');
+  } else if (type === 'combo') {
+    playSound('combo');
+    damage = 15 + Math.floor(Math.random() * 10);
+    hitText = 'COMBO!'; powerGain = 20;
+    animateFighter('p1', 'combo');
+  }
+
+  if (gameState.p2Blocking && Math.random() > 0.4) {
+    damage = Math.floor(damage * 0.15);
+    hitText = 'BLOCKED';
+    showHitText(hitText, 'p2', '#00bcd4');
+  } else {
+    applyDamage('p2', damage);
+    showHitText(hitText, 'p2', p1Char.glowColor);
+    spawnBlood('p2');
+    flashScreen();
+  }
+
+  gainPower('p1', powerGain);
+  setTimeout(() => aiCounter(), 200 + Math.random() * 500);
+}
+
+function useSpecial() {
+  if (!gameState.gameRunning) return;
+  if (gameState.p1Power < 100) {
+    showHitText('NEED MORE POWER!', 'p1', '#888');
+    return;
+  }
+  playSound('special');
+  gameState.p1Power = 0;
+  updatePowerBars();
+  document.getElementById('special-ready-text').textContent = 'FILL POWER BAR';
+  document.getElementById('special-ready-text').style.color = '#555';
+  const damage = 35 + Math.floor(Math.random() * 20);
+  animateFighter('p1', 'special');
+  showAnnouncer(p1Char.special + '!', 'special', 1200);
+  setTimeout(() => {
+    applyDamage('p2', damage);
+    spawnBlood('p2');
+    flashScreen();
+    showHitText('💥 ' + damage, 'p2', p1Char.glowColor);
+  }, 400);
+}
+
+function pressBtn(dir, down) {
+  pressedKeys[dir] = down;
+  if (!gameState.gameRunning) return;
+  const btn = document.getElementById('btn-' + dir);
+  if (btn) down ? btn.classList.add('pressed') : btn.classList.remove('pressed');
+  if (dir === 'left' || dir === 'right') {
+    setWalking('p1', !!(pressedKeys.left || pressedKeys.right));
+  }
+  if (down) {
+    if (dir === 'up') { playSound('jump'); animateFighter('p1', 'jump'); gainPower('p1', 5); }
+    else if (dir === 'left' || dir === 'right') { gainPower('p1', 2); }
+    else if (dir === 'down') { gameState.p1Blocking = true; animateFighter('p1', 'block'); setTimeout(() => { gameState.p1Blocking = false; }, 500); }
+  }
+}
+
+function gainPower(player, amount) {
+  if (player === 'p1') {
+    gameState.p1Power = Math.min(100, gameState.p1Power + amount);
+    if (gameState.p1Power >= 100) {
+      document.getElementById('special-ready-text').textContent = '⚡ SPECIAL READY!';
+      document.getElementById('special-ready-text').style.color = '#a855f7';
+    }
+  } else {
+    gameState.p2Power = Math.min(100, gameState.p2Power + amount);
+  }
+  updatePowerBars();
+}
+
+// ============================================================
+// AI
+// ============================================================
+function startAI() {
+  gameState.aiInterval = setInterval(() => {
+    if (!gameState.gameRunning) return;
+    const r = Math.random();
+    if (r < 0.15) aiCounter();
+  }, 1200);
+}
+
+function aiCounter() {
+  if (!gameState.gameRunning) return;
+  const actions = ['punch', 'punch', 'kick', 'combo', 'block'];
+  const action = actions[Math.floor(Math.random() * actions.length)];
+  if (action === 'block') {
+    gameState.p2Blocking = true; animateFighter('p2', 'block');
+    setTimeout(() => { gameState.p2Blocking = false; }, 500);
+    return;
+  }
+  const damage = action === 'punch' ? 6 + Math.floor(Math.random() * 6) : action === 'kick' ? 9 + Math.floor(Math.random() * 8) : 12 + Math.floor(Math.random() * 8);
+  animateFighter('p2', action === 'combo' ? 'combo' : action); gainPower('p2', 12);
+  if (gameState.p1Blocking && Math.random() > 0.5) {
+    showHitText('BLOCKED', 'p1', '#00bcd4');
+  } else {
+    applyDamage('p1', damage);
+    showHitText(getHitText(action), 'p1', p2Char.glowColor);
+    spawnBlood('p1');
+  }
+  if (gameState.p2Power >= 100 && Math.random() > 0.5) {
+    gameState.p2Power = 0; updatePowerBars();
+    const sDmg = 30 + Math.floor(Math.random() * 20);
+    setTimeout(() => {
+      animateFighter('p2', 'special');
+      applyDamage('p1', sDmg);
+      showHitText('⚡ ' + sDmg, 'p1', p2Char.glowColor);
+      flashScreen();
+    }, 200);
+  }
+}
+
+function getHitText(type) {
+  const punches = ['MAD PUNCH!', 'MAD HIT!', 'MAD POW!', 'MAD BAM!', 'MAD CRACK!'];
+  const kicks = ['KICK!', 'SLAM!', 'BASH!', 'CRUSH!', 'WHAM!'];
+  if (type === 'punch') return punches[Math.floor(Math.random() * punches.length)];
+  if (type === 'kick') return kicks[Math.floor(Math.random() * kicks.length)];
+  return 'COMBO!';
+}
+
+// ============================================================
+// DAMAGE & HEALTH
+// ============================================================
+function applyDamage(player, damage) {
+  if (player === 'p1') { gameState.p1HP = Math.max(0, gameState.p1HP - damage); animateFighter('p1', 'hurt'); gainPower('p1', 8); }
+  else { gameState.p2HP = Math.max(0, gameState.p2HP - damage); animateFighter('p2', 'hurt'); gainPower('p2', 8); }
+  updateHealthBars();
+  if (gameState.p1HP <= 0 || gameState.p2HP <= 0) roundEnd();
+}
+
+function updateHealthBars() {
+  const p1Bar = document.getElementById('p1-health-bar');
+  const p2Bar = document.getElementById('p2-health-bar');
+  p1Bar.style.width = gameState.p1HP + '%';
+  p2Bar.style.width = gameState.p2HP + '%';
+  const setColor = (bar, hp) => { bar.classList.remove('low','medium'); if (hp <= 25) bar.classList.add('low'); else if (hp <= 50) bar.classList.add('medium'); };
+  setColor(p1Bar, gameState.p1HP); setColor(p2Bar, gameState.p2HP);
+}
+
+function updatePowerBars() {
+  document.getElementById('p1-power-bar').style.width = gameState.p1Power + '%';
+  document.getElementById('p2-power-bar').style.width = gameState.p2Power + '%';
+}
+
+// ============================================================
+// ROUND / MATCH END
+// ============================================================
+function roundEnd() {
+  gameState.gameRunning = false;
+  clearInterval(gameState.timerInterval);
+  clearInterval(gameState.aiInterval);
+  let winner;
+  if (gameState.p1HP <= 0 && gameState.p2HP <= 0) winner = 'DRAW';
+  else if (gameState.p1HP <= 0) { winner = 'p2'; gameState.p2Wins++; }
+  else { winner = 'p1'; gameState.p1Wins++; }
+
+  if (winner === 'DRAW') showAnnouncer('DRAW!', 'ko', 2000);
+  else { showAnnouncer('$MAD!', 'ko', 2000); playSound('mad'); }
+
+  setTimeout(() => {
+    if (gameState.p1Wins >= 2 || gameState.p2Wins >= 2) {
+      stopBattleMusic();
+      showFinalWin(winner);
+      playSound('win');
+    } else {
+      gameState.round++;
+      document.getElementById('round-display').textContent = 'ROUND ' + gameState.round;
+      resetRound();
+      resetFighterPositions();
+      document.getElementById('p1-sprite').innerHTML = drawFighter(p1Char);
+      document.getElementById('p2-sprite').innerHTML = drawFighter(p2Char);
+      document.getElementById('p1-sprite').classList.add('idle');
+      document.getElementById('p2-sprite').classList.add('idle');
+      showAnnouncer('ROUND ' + gameState.round, 'fight', 1500);
+      setTimeout(() => { gameState.gameRunning = true; startTimer(); startMovementLoop(); if (gameMode === 'ai') startAI(); }, 1500);
+    }
+  }, 2200);
+}
+
+function timeUp() {
+  if (gameState.p1HP > gameState.p2HP) { gameState.p1Wins++; showAnnouncer('TIME!', 'ko', 2000); setTimeout(() => showFinalWin('p1'), 2200); }
+  else if (gameState.p2HP > gameState.p1HP) { gameState.p2Wins++; showAnnouncer('TIME!', 'ko', 2000); setTimeout(() => showFinalWin('p2'), 2200); }
+  else { showAnnouncer('DRAW!', 'ko', 2000); setTimeout(() => goToCharSelect('local'), 2500); }
+}
+
+function showFinalWin(player) {
+  clearInterval(gameState.timerInterval); clearInterval(gameState.aiInterval); stopMovementLoop();
+  gameState.gameRunning = false;
+  const winnerChar = player === 'p1' ? p1Char : p2Char;
+  document.getElementById('win-title').textContent = player === 'DRAW' ? 'DRAW!' : 'WINNER!';
+  document.getElementById('winner-name').textContent = player === 'DRAW' ? 'BOTH FIGHTERS' : winnerChar.name;
+  document.getElementById('winner-name').style.color = player === 'DRAW' ? '#aaa' : winnerChar.color;
+  document.getElementById('round-wins-text').textContent = 'P1: ' + gameState.p1Wins + ' — P2: ' + gameState.p2Wins;
+  recordOnlineResult(player);
+  showScreen('win-screen');
+}
+
+// ============================================================
+// VISUAL EFFECTS
+// ============================================================
+function showAnnouncer(text, type, duration) {
+  const el = document.getElementById('announcer');
+  el.textContent = text; el.className = 'announcer ' + type + ' show';
+  setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function showHitText(text, target, color) {
+  const arena = document.getElementById('game-arena');
+  const el = document.createElement('div');
+  el.className = 'hit-effect'; el.textContent = text; el.style.color = color;
+  el.style.fontFamily = 'Arial Black, sans-serif'; el.style.fontWeight = '900';
+  el.style.textShadow = '0 0 10px ' + color;
+  el.style.left = (target === 'p1' ? '20%' : '60%');
+  el.style.top = (30 + Math.random() * 20) + '%';
+  arena.appendChild(el); setTimeout(() => el.remove(), 700);
+}
+
+function flashScreen() {
+  const f = document.getElementById('screen-flash');
+  f.classList.add('show'); setTimeout(() => f.classList.remove('show'), 150);
+}
+
+function spawnBlood(target) {
+  const arena = document.getElementById('game-arena');
+  const x = target === 'p1' ? 20 : 60;
+  for (let i = 0; i < 4; i++) {
+    const drop = document.createElement('div'); drop.className = 'blood-drop';
+    drop.style.left = (x + Math.random() * 15) + '%';
+    drop.style.top = (40 + Math.random() * 20) + '%';
+    const sz = (4 + Math.random() * 8) + 'px';
+    drop.style.width = sz; drop.style.height = sz;
+    arena.appendChild(drop); setTimeout(() => drop.remove(), 1000);
+  }
+}
+
+const animCooldown = { p1: false, p2: false };
+const ANIM_DURATIONS = { punch: 350, kick: 400, combo: 500, block: 550, jump: 550, special: 550, hurt: 350, attack: 350 };
+function animateFighter(player, type) {
+  if (animCooldown[player]) return;
+  animCooldown[player] = true;
+  const el = document.getElementById(player + '-sprite');
+  el.classList.remove('idle');
+  el.classList.add(type + '-anim');
+  const ms = ANIM_DURATIONS[type] || 350;
+  setTimeout(() => {
+    el.classList.remove(type + '-anim');
+    animCooldown[player] = false;
+    if (gameState.gameRunning) el.classList.add('idle');
+  }, ms);
+}
+
+// Toggles the walking limb-swing animation on/off as movement keys are held,
+// so the fighter visibly strides instead of just sliding across the arena.
+function setWalking(player, isWalking) {
+  const el = document.getElementById(player + '-sprite');
+  if (!el) return;
+  if (isWalking) { el.classList.remove('idle'); el.classList.add('walking'); }
+  else { el.classList.remove('walking'); if (gameState.gameRunning) el.classList.add('idle'); }
+}
+
+// ============================================================
+// AUTH & LOBBY (Firebase Realtime Database — real cross-device sync)
+// ============================================================
+let currentUser = null;
+let lobbyInterval = null;
+let onlineListenerRef = null, onlineListenerFn = null;
+let challengeListenerRef = null, challengeListenerFn = null;
+let outgoingChallengeRef = null, outgoingChallengeFn = null;
+
+function userRef(username) { return db.ref('users/' + username.toLowerCase()); }
+function onlineRef(username) { return db.ref('online/' + username.toLowerCase()); }
+
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id); if (!el) return;
+  el.textContent = msg; el.className = 'online-status' + (type ? ' status-' + type : '');
+}
+
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + ' timed out')), ms))
+  ]);
+}
+
+async function doSignup() {
+  const u = document.getElementById('signup-username').value.trim();
+  const p = document.getElementById('signup-password').value;
+  const p2 = document.getElementById('signup-password2').value;
+  if (!u || u.length < 3) return setStatus('signup-status', '⚠ Username must be at least 3 characters!', 'error');
+  if (!/^[a-zA-Z0-9_]+$/.test(u)) return setStatus('signup-status', '⚠ Only letters, numbers and _ allowed!', 'error');
+  if (!p || p.length < 4) return setStatus('signup-status', '⚠ Password must be at least 4 characters!', 'error');
+  if (p !== p2) return setStatus('signup-status', '⚠ Passwords do not match!', 'error');
+  setStatus('signup-status', 'Checking availability...', 'waiting');
+  try {
+    const snap = await withTimeout(userRef(u).get(), 8000, 'Signup');
+    if (snap.exists()) return setStatus('signup-status', '⚠ Username already taken!', 'error');
+    await withTimeout(userRef(u).set({ username: u, password: btoa(p), wins: 0, losses: 0, joined: Date.now() }), 8000, 'Signup');
+    setStatus('signup-status', '✅ Account created! Logging you in...', 'connected');
+    setTimeout(() => loginAs(u), 1000);
+  } catch (e) {
+    setStatus('signup-status', '⚠ Could not reach the server. If this keeps happening, try opening this page in your phone\'s normal browser (Chrome/Safari) instead of an in-app preview — some apps block this kind of connection.', 'error');
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById('login-username').value.trim();
+  const p = document.getElementById('login-password').value;
+  if (!u || !p) return setStatus('login-status', '⚠ Enter username and password!', 'error');
+  setStatus('login-status', 'Connecting...', 'waiting');
+  try {
+    const snap = await withTimeout(userRef(u).get(), 8000, 'Login');
+    if (!snap.exists()) return setStatus('login-status', '⚠ Username not found!', 'error');
+    const rec = snap.val();
+    if (rec.password !== btoa(p)) return setStatus('login-status', '⚠ Wrong password!', 'error');
+    setStatus('login-status', '✅ Welcome back, ' + rec.username + '!', 'connected');
+    setTimeout(() => loginAs(rec.username), 800);
+  } catch (e) {
+    setStatus('login-status', '⚠ Could not reach the server. If this keeps happening, try opening this page in your phone\'s normal browser (Chrome/Safari) instead of an in-app preview — some apps block this kind of connection.', 'error');
+  }
+}
+
+async function loginAs(username) {
+  currentUser = username;
+  const myOnlineRef = onlineRef(username);
+  try {
+    await myOnlineRef.set({ username, lastSeen: Date.now() });
+    myOnlineRef.onDisconnect().remove(); // auto-clears presence if the tab closes or connection drops
+  } catch (e) {}
+  document.getElementById('lobby-username-display').textContent = username.toUpperCase();
+  try {
+    const snap = await userRef(username).get();
+    if (snap.exists()) {
+      const rec = snap.val();
+      document.getElementById('lobby-record').textContent = 'W: ' + (rec.wins || 0) + '  L: ' + (rec.losses || 0);
+    }
+  } catch (e) {}
+  showScreen('lobby-screen');
+  startLobbyListeners();
+  if (lobbyInterval) clearInterval(lobbyInterval);
+  lobbyInterval = setInterval(() => { if (currentUser) onlineRef(currentUser).update({ lastSeen: Date.now() }).catch(()=>{}); }, 15000);
+}
+
+async function logoutUser() {
+  stopLobbyListeners();
+  if (currentUser) { try { await onlineRef(currentUser).remove(); } catch (e) {} }
+  currentUser = null;
+  myPendingChallengeId = null; myPendingChallengeTo = null; myPendingNavigated = false;
+  if (lobbyInterval) clearInterval(lobbyInterval);
+  showScreen('home-screen');
+}
+
+// Live presence — updates instantly on every connected device the moment
+// someone signs in or disconnects, instead of waiting on a polling timer.
+let myPendingChallengeId = null;   // id of a challenge WE sent, still pending
+let myPendingChallengeTo = null;   // username we challenged
+let myPendingNavigated = false;    // guard against double-navigation
+
+function startLobbyListeners() {
+  stopLobbyListeners();
+  onlineListenerRef = db.ref('online');
+  onlineListenerFn = onlineListenerRef.on('value', snap => renderOnlinePlayers(snap.val() || {}), () => {});
+  challengeListenerRef = db.ref('challenges');
+  challengeListenerFn = challengeListenerRef.on('value', snap => {
+    const data = snap.val() || {};
+    renderIncomingChallenges(data);
+    checkMyOutgoingChallenge(data);
+  }, (err) => {
+    setStatus('challenge-status', '⚠ Lobby connection error: ' + (err && err.message ? err.message : err), 'error');
+  });
+}
+
+// Checks the SAME data the lobby already receives for an outgoing challenge of
+// ours that got accepted/declined. This reuses the listener that we already know
+// works (it's what renders "incoming challenges"), instead of a separate ref that
+// can silently fail to deliver updates.
+function checkMyOutgoingChallenge(data) {
+  if (!myPendingChallengeId || myPendingNavigated) return;
+  const c = data[myPendingChallengeId];
+  if (!c) {
+    // Node gone — acceptor removes it after accepting, so treat missing as accepted.
+    myPendingNavigated = true;
+    const target = myPendingChallengeTo;
+    myPendingChallengeId = null; myPendingChallengeTo = null;
+    gameMode = 'ai'; isOnlineMatch = true; onlineRole = 'challenger'; onlineOpponent = target;
+    setStatus('challenge-status', '✅ ' + target.toUpperCase() + ' accepted! Loading arena...', 'connected');
+    setTimeout(() => { goToCharSelect('ai', true); }, 1000);
+    return;
+  }
+  if (c.status === 'accepted') {
+    myPendingNavigated = true;
+    const target = myPendingChallengeTo;
+    db.ref('challenges/' + myPendingChallengeId).remove().catch(() => {});
+    myPendingChallengeId = null; myPendingChallengeTo = null;
+    gameMode = 'ai'; isOnlineMatch = true; onlineRole = 'challenger'; onlineOpponent = target;
+    setStatus('challenge-status', '✅ ' + target.toUpperCase() + ' accepted! Loading arena...', 'connected');
+    setTimeout(() => { goToCharSelect('ai', true); }, 1000);
+  } else if (c.status === 'declined') {
+    const target = myPendingChallengeTo;
+    db.ref('challenges/' + myPendingChallengeId).remove().catch(() => {});
+    myPendingChallengeId = null; myPendingChallengeTo = null;
+    setStatus('challenge-status', '⚠ ' + target.toUpperCase() + ' declined the challenge.', 'error');
+  }
+}
+
+function stopLobbyListeners() {
+  if (onlineListenerRef && onlineListenerFn) onlineListenerRef.off('value', onlineListenerFn);
+  if (challengeListenerRef && challengeListenerFn) challengeListenerRef.off('value', challengeListenerFn);
+  stopOutgoingChallengeListener();
+  onlineListenerRef = onlineListenerFn = challengeListenerRef = challengeListenerFn = null;
+}
+
+function stopOutgoingChallengeListener() {
+  if (outgoingChallengeRef && outgoingChallengeFn) outgoingChallengeRef.off('value', outgoingChallengeFn);
+  outgoingChallengeRef = outgoingChallengeFn = null;
+}
+
+function renderOnlinePlayers(data) {
+  if (!currentUser) return;
+  const list = document.getElementById('online-players-list');
+  if (!list) return;
+  const now = Date.now();
+  const others = Object.values(data).filter(p => p && p.username && p.username.toLowerCase() !== currentUser.toLowerCase() && now - p.lastSeen < 60000);
+  if (others.length === 0) {
+    list.innerHTML = '<div style="color:#555;padding:10px;">NO OTHER PLAYERS ONLINE<br><span style="font-size:10px;color:#333;">SHARE THE GAME LINK TO INVITE FRIENDS!</span></div>';
+  } else {
+    list.innerHTML = others.map(p => '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;"><span style="color:#2ecc71;font-weight:700;letter-spacing:1px;">🟢 ' + p.username.toUpperCase() + '</span><button onclick="quickChallenge(\'' + p.username + '\')" style="background:rgba(192,57,43,0.3);border:1px solid #c0392b;color:#e74c3c;font-size:10px;padding:4px 10px;border-radius:4px;cursor:pointer;letter-spacing:1px;">CHALLENGE</button></div>').join('');
+  }
+}
+
+function renderIncomingChallenges(data) {
+  if (!currentUser) return;
+  const incomingEl = document.getElementById('incoming-challenges');
+  if (!incomingEl) return;
+  const now = Date.now();
+  const mine = Object.entries(data)
+    .map(([id, c]) => (c ? Object.assign({}, c, { id }) : null))
+    .filter(c => c && c.to && c.to.toLowerCase() === currentUser.toLowerCase() && now - c.time < 60000);
+  if (mine.length === 0) {
+    incomingEl.innerHTML = '<div style="color:#555;padding:8px;">NO CHALLENGES YET</div>';
+  } else {
+    incomingEl.innerHTML = mine.map(c => '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1a1a;"><span style="color:var(--gold);font-size:12px;">⚔️ ' + c.from.toUpperCase() + '</span><div style="display:flex;gap:5px;"><button onclick="acceptChallenge(\'' + c.from + '\',\'' + c.id + '\')" style="background:rgba(39,174,96,0.3);border:1px solid #27ae60;color:#27ae60;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;">ACCEPT</button><button onclick="declineChallenge(\'' + c.id + '\')" style="background:rgba(192,57,43,0.2);border:1px solid #444;color:#888;font-size:10px;padding:4px 8px;border-radius:4px;cursor:pointer;">DECLINE</button></div></div>').join('');
+  }
+}
+
+// Manual refresh button — listeners already keep things live, this just
+// re-pings presence in case this device's connection had hiccuped.
+function refreshLobby() {
+  if (!currentUser) return;
+  onlineRef(currentUser).update({ lastSeen: Date.now() }).catch(() => {});
+}
+
+function quickChallenge(username) { document.getElementById('challenge-target').value = username; sendChallenge(); }
+
+async function sendChallenge() {
+  const target = document.getElementById('challenge-target').value.trim();
+  if (!target) return setStatus('challenge-status', '⚠ Enter a username!', 'error');
+  if (target.toLowerCase() === currentUser.toLowerCase()) return setStatus('challenge-status', '⚠ You cannot challenge yourself!', 'error');
+  setStatus('challenge-status', 'Searching for player...', 'waiting');
+  try {
+    const snap = await onlineRef(target).get();
+    if (!snap.exists()) return setStatus('challenge-status', '⚠ ' + target + ' is not online!', 'error');
+    const id = 'ch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    await db.ref('challenges/' + id).set({ id, from: currentUser, to: target, time: Date.now(), status: 'pending' });
+    setStatus('challenge-status', '✅ Challenge sent to ' + target.toUpperCase() + '! Waiting...', 'waiting');
+
+    // Track this as our pending outgoing challenge — the shared lobby listener
+    // (already running via startLobbyListeners) will pick up status changes on
+    // every 'challenges' update and call checkMyOutgoingChallenge for us.
+    myPendingChallengeId = id;
+    myPendingChallengeTo = target;
+    myPendingNavigated = false;
+  } catch (e) {
+    setStatus('challenge-status', '⚠ Connection error. Try again.', 'error');
+  }
+}
+
+async function acceptChallenge(fromUser, challengeId) {
+  try { await db.ref('challenges/' + challengeId).update({ status: 'accepted' }); } catch (e) {}
+  // Give the sender's listener time to receive 'accepted' before the node is deleted.
+  // 6 seconds provides enough buffer even on slow mobile connections.
+  setTimeout(() => { db.ref('challenges/' + challengeId).remove().catch(() => {}); }, 6000);
+  gameMode = 'ai';
+  isOnlineMatch = true;
+  onlineRole = 'acceptor';
+  onlineOpponent = fromUser;
+  setStatus('challenge-status', '✅ Challenge accepted! Loading arena...', 'connected');
+  setTimeout(() => { goToCharSelect('ai', true); }, 1000);
+}
+
+async function declineChallenge(challengeId) {
+  try { await db.ref('challenges/' + challengeId).update({ status: 'declined' }); } catch (e) {}
+  setTimeout(() => { db.ref('challenges/' + challengeId).remove().catch(() => {}); }, 3000);
+}
+
+// Record a win/loss on the logged-in user's account after an online match
+async function recordOnlineResult(winner) {
+  if (!isOnlineMatch || !currentUser || winner === 'DRAW') return;
+  const field = winner === 'p1' ? 'wins' : 'losses';
+  try {
+    await userRef(currentUser).update({ [field]: firebase.database.ServerValue.increment(1) });
+    const snap = await userRef(currentUser).get();
+    if (snap.exists()) {
+      const rec = snap.val();
+      const display = document.getElementById('lobby-record');
+      if (display) display.textContent = 'W: ' + (rec.wins || 0) + '  L: ' + (rec.losses || 0);
+    }
+  } catch (e) {}
+}
+
+// ============================================================
+// KEYBOARD SUPPORT
+// ============================================================
+document.addEventListener('keydown', (e) => {
+  if (!gameState.gameRunning) return;
+  switch(e.key) {
+    case 'ArrowLeft': pressBtn('left', true); break;
+    case 'ArrowRight': pressBtn('right', true); break;
+    case 'ArrowUp': pressBtn('up', true); break;
+    case 'ArrowDown': pressBtn('down', true); break;
+    case 'z': case 'Z': doAction('punch'); break;
+    case 'x': case 'X': doAction('kick'); break;
+    case 'c': case 'C': doAction('block'); break;
+    case 'v': case 'V': doAction('combo'); break;
+    case ' ': useSpecial(); break;
+  }
+});
+document.addEventListener('keyup', (e) => {
+  switch(e.key) {
+    case 'ArrowLeft': pressBtn('left', false); break;
+    case 'ArrowRight': pressBtn('right', false); break;
+    case 'ArrowUp': pressBtn('up', false); break;
+    case 'ArrowDown': pressBtn('down', false); break;
+  }
+});
+
+document.getElementById('game-screen').addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+
+// Start ambient music on first interaction
+document.addEventListener('click', function startOnFirstClick() {
+  if (musicOn) startAmbientMusic();
+  document.removeEventListener('click', startOnFirstClick);
+}, { once: true });
+document.addEventListener('touchstart', function(e) {
+  // Prevent double-tap-to-zoom on rapid taps, but never swallow real button/control taps
+  if (e.target.closest('button, .menu-btn, .back-btn, .dpad-btn, .action-btn, .fatality-btn, .fighter-card, input, .online-input, [onclick]')) return;
+  const now = Date.now();
+  if (now - (window._lastTouchEnd || 0) < 300) e.preventDefault();
+  window._lastTouchEnd = now;
+}, { passive: false });
+</script>
+</body>
+</html>
